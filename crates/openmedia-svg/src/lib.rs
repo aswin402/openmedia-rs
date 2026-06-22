@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use openmedia_core::{Result, SvgOutput};
+use openmedia_core::{Result, SvgOutput, ImageOutput, OpenMediaError};
 use std::collections::HashMap;
 
 #[derive(Debug, Clone)]
@@ -609,6 +609,159 @@ pub fn generate_chart(config: &ChartConfig) -> Result<String> {
     Ok(format!("<svg width=\"{}\" height=\"{}\"><text y=\"20\">Chart: {:?}</text></svg>", config.width, config.height, config.chart_type))
 }
 
+
+/// Rasterize an SVG string into an ImageOutput with specified dimensions and background color.
+pub fn rasterize(
+    svg_content: &str,
+    width: Option<u32>,
+    height: Option<u32>,
+    bg_color: Option<&str>,
+    format: &str,
+    output_path: &std::path::Path,
+) -> Result<ImageOutput> {
+    use std::time::Instant;
+    use resvg::usvg;
+    let start_time = Instant::now();
+
+    // Parse the SVG
+    let opt = usvg::Options::default();
+    let tree = usvg::Tree::from_str(svg_content, &opt)
+        .map_err(|e| OpenMediaError::InvalidSvgInput(e.to_string()))?;
+
+    // Determine dimensions and scale factor
+    let svg_size = tree.size();
+    let (w, h, factor) = match (width, height) {
+        (Some(w), Some(h)) => {
+            let factor_w = w as f32 / svg_size.width();
+            let factor_h = h as f32 / svg_size.height();
+            let factor = factor_w.min(factor_h);
+            (w, h, factor)
+        }
+        (Some(w), None) => {
+            let factor = w as f32 / svg_size.width();
+            (w, (svg_size.height() * factor).round() as u32, factor)
+        }
+        (None, Some(h)) => {
+            let factor = h as f32 / svg_size.height();
+            ((svg_size.width() * factor).round() as u32, h, factor)
+        }
+        (None, None) => (
+            svg_size.width().round() as u32,
+            svg_size.height().round() as u32,
+            1.0,
+        ),
+    };
+
+    let mut pixmap = tiny_skia::Pixmap::new(w, h)
+        .ok_or_else(|| OpenMediaError::InvalidDimensions {
+            width: w,
+            height: h,
+            reason: "Failed to allocate pixmap".to_string(),
+        })?;
+
+    // Fill background if specified
+    if let Some(color_str) = bg_color {
+        let clean_hex = color_str.trim_start_matches('#');
+        if let Ok(val) = u32::from_str_radix(clean_hex, 16) {
+            let r = ((val >> 16) & 0xFF) as f32 / 255.0;
+            let g = ((val >> 8) & 0xFF) as f32 / 255.0;
+            let b = (val & 0xFF) as f32 / 255.0;
+            let a = if clean_hex.len() == 8 {
+                ((val >> 24) & 0xFF) as f32 / 255.0
+            } else {
+                1.0
+            };
+            if let Some(skia_color) = tiny_skia::Color::from_rgba(r, g, b, a) {
+                pixmap.fill(skia_color);
+            }
+        }
+    }
+
+    // Render using resvg
+    let transform = tiny_skia::Transform::from_scale(factor, factor);
+    resvg::render(&tree, transform, &mut pixmap.as_mut());
+
+    // Demultiply alpha for formats other than PNG (or always for general image saving)
+    let mut pixels = pixmap.data().to_vec();
+    for chunk in pixels.chunks_exact_mut(4) {
+        let a = chunk[3];
+        if a > 0 && a < 255 {
+            let alpha_factor = 255.0 / a as f32;
+            chunk[0] = (chunk[0] as f32 * alpha_factor).min(255.0) as u8;
+            chunk[1] = (chunk[1] as f32 * alpha_factor).min(255.0) as u8;
+            chunk[2] = (chunk[2] as f32 * alpha_factor).min(255.0) as u8;
+        }
+    }
+
+    // Save output based on format
+    let clean_format = format.to_lowercase();
+    match clean_format.as_str() {
+        "png" => {
+            pixmap.save_png(output_path)
+                .map_err(|e| OpenMediaError::ImageEncodeError {
+                    format: "png".to_string(),
+                    reason: e.to_string(),
+                })?;
+        }
+        "jpeg" | "jpg" => {
+            let img = image::ImageBuffer::<image::Rgb<u8>, _>::from_raw(w, h, {
+                // Drop alpha channel
+                let mut rgb_pixels = Vec::with_capacity((w * h * 3) as usize);
+                for chunk in pixels.chunks_exact(4) {
+                    rgb_pixels.push(chunk[0]);
+                    rgb_pixels.push(chunk[1]);
+                    rgb_pixels.push(chunk[2]);
+                }
+                rgb_pixels
+            }).ok_or_else(|| OpenMediaError::ImageEncodeError {
+                format: "jpeg".to_string(),
+                reason: "Failed to create RGB image buffer".to_string(),
+            })?;
+            img.save(output_path)
+                .map_err(|e| OpenMediaError::ImageEncodeError {
+                    format: "jpeg".to_string(),
+                    reason: e.to_string(),
+                })?;
+        }
+        "webp" => {
+            let img = image::ImageBuffer::<image::Rgba<u8>, _>::from_raw(w, h, pixels)
+                .ok_or_else(|| OpenMediaError::ImageEncodeError {
+                    format: "webp".to_string(),
+                    reason: "Failed to create RGBA image buffer".to_string(),
+                })?;
+            img.save(output_path)
+                .map_err(|e| OpenMediaError::ImageEncodeError {
+                    format: "webp".to_string(),
+                    reason: e.to_string(),
+                })?;
+        }
+        other => {
+            return Err(OpenMediaError::InvalidParameter {
+                param: "output_format".to_string(),
+                reason: format!("Unsupported format: {}", other),
+            });
+        }
+    }
+
+    let file_size = std::fs::metadata(output_path)?.len();
+    let generation_time = start_time.elapsed().as_secs_f64();
+
+    Ok(ImageOutput {
+        path: output_path.to_path_buf(),
+        width: w,
+        height: h,
+        seed: 0,
+        format: clean_format,
+        file_size,
+        generation_id: uuid::Uuid::now_v7().to_string(),
+        clip_score: None,
+        aesthetic_score: None,
+        model_used: "resvg".to_string(),
+        backend_used: "resvg".to_string(),
+        generation_time,
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -637,4 +790,21 @@ mod tests {
         assert!(output.contains("fill=\"red\"") || output.contains("stroke=\"black\""));
         assert!(output.contains("fill=\"blue\""));
     }
+
+    #[test]
+    fn test_rasterize_svg() {
+        let svg = r#"<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100">
+            <rect width="100" height="100" fill="red"/>
+        </svg>"#;
+        let temp_dir = std::env::temp_dir();
+        let out_path = temp_dir.join("test_rasterize.png");
+        let result = rasterize(svg, Some(200), None, Some("#00ff00"), "png", &out_path);
+        assert!(result.is_ok());
+        let output = result.unwrap();
+        assert_eq!(output.width, 200);
+        assert_eq!(output.height, 200);
+        assert!(out_path.exists());
+        let _ = std::fs::remove_file(out_path);
+    }
 }
+

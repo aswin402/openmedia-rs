@@ -18,8 +18,10 @@ thiserror = { workspace = true }
 tracing = { workspace = true }
 image = { workspace = true }
 async-trait = { workspace = true }
+uuid = { workspace = true }
 
 resvg = { version = "0.44" }
 tiny-skia = { version = "0.11" }
-chromiumoxide = { version = "0.7", features = ["async-std-runtime"] } # or tokio runtime if available, async-std-runtime is commonly used
+chromiumoxide = { version = "0.7", features = ["tokio-runtime"] }
+futures = "0.3"
 symphonia = { version = "0.5", features = ["all"] }

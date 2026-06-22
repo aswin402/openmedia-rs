@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use openmedia_core::{Result, OpenMediaError};
+use openmedia_core::{Result, OpenMediaError, ImageOutput};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct VideoScene {
@@ -280,4 +280,118 @@ impl FrameRenderer for DummyFrameRenderer {
     fn name(&self) -> &str {
         "dummy"
     }
+}
+
+/// Render HTML/CSS content to a screenshot image (PNG, JPEG, WebP) using headless Chromium.
+pub async fn html_to_image(
+    html_content: &str,
+    width: Option<u32>,
+    height: Option<u32>,
+    device_scale_factor: Option<f64>,
+    format: &str,
+    output_path: &std::path::Path,
+) -> Result<ImageOutput> {
+    use std::time::Instant;
+    use futures::StreamExt;
+    use chromiumoxide::browser::{Browser, BrowserConfig};
+    use chromiumoxide::handler::viewport::Viewport;
+    use chromiumoxide::page::ScreenshotParams;
+    use chromiumoxide::cdp::browser_protocol::page::CaptureScreenshotFormat;
+
+    let start_time = Instant::now();
+
+    let w = width.unwrap_or(1920);
+    let h = height.unwrap_or(1080);
+    let scale = device_scale_factor.unwrap_or(1.0);
+
+    // Create the browser configuration
+    let config = BrowserConfig::builder()
+        .viewport(Viewport {
+            width: w,
+            height: h,
+            device_scale_factor: Some(scale),
+            emulating_mobile: false,
+            is_landscape: w > h,
+            has_touch: false,
+        })
+        .no_sandbox()
+        .build()
+        .map_err(|e| OpenMediaError::ConfigError(e.to_string()))?;
+
+    // Launch the browser
+    let (mut browser, mut handler) = Browser::launch(config).await
+        .map_err(|_| OpenMediaError::ChromeNotFound)?;
+
+    // Spawn the handler task to process background CDP events
+    tokio::spawn(async move {
+        while let Some(h) = handler.next().await {
+            if let Err(err) = h {
+                tracing::error!("Browser handler error: {:?}", err);
+                break;
+            }
+        }
+    });
+
+    // Open a new page
+    let page = browser.new_page("about:blank").await
+        .map_err(|e| OpenMediaError::Internal(e.to_string()))?;
+
+    // Check if html_content is a file path that exists
+    let html_path = std::path::Path::new(html_content);
+    if html_path.exists() && html_path.is_file() {
+        let abs_path = html_path.canonicalize()
+            .map_err(|e| OpenMediaError::IoError(e))?;
+        let url = format!("file://{}", abs_path.to_string_lossy());
+        page.goto(&url).await
+            .map_err(|e| OpenMediaError::Internal(e.to_string()))?;
+    } else {
+        page.set_content(html_content).await
+            .map_err(|e| OpenMediaError::Internal(e.to_string()))?;
+    }
+
+    // Set screenshot format parameter
+    let clean_format = format.to_lowercase();
+    let cdp_format = match clean_format.as_str() {
+        "png" => CaptureScreenshotFormat::Png,
+        "jpeg" | "jpg" => CaptureScreenshotFormat::Jpeg,
+        "webp" => CaptureScreenshotFormat::Webp,
+        other => {
+            return Err(OpenMediaError::InvalidParameter {
+                param: "output_format".to_string(),
+                reason: format!("Unsupported screenshot format: {}", other),
+            });
+        }
+    };
+
+    let params = ScreenshotParams::builder()
+        .format(cdp_format)
+        .build();
+
+    // Capture screenshot
+    page.save_screenshot(params, output_path).await
+        .map_err(|e| OpenMediaError::ImageEncodeError {
+            format: clean_format.clone(),
+            reason: e.to_string(),
+        })?;
+
+    // Close the browser to clean up processes
+    let _ = browser.close().await;
+
+    let file_size = std::fs::metadata(output_path)?.len();
+    let generation_time = start_time.elapsed().as_secs_f64();
+
+    Ok(ImageOutput {
+        path: output_path.to_path_buf(),
+        width: w,
+        height: h,
+        seed: 0,
+        format: clean_format,
+        file_size,
+        generation_id: uuid::Uuid::now_v7().to_string(),
+        clip_score: None,
+        aesthetic_score: None,
+        model_used: "headless-chrome".to_string(),
+        backend_used: "chromiumoxide".to_string(),
+        generation_time,
+    })
 }

@@ -335,6 +335,7 @@ dependencies = [
  "futures-util",
  "log",
  "pin-project-lite",
+ "tokio",
  "tungstenite",
 ]
 
@@ -689,6 +690,7 @@ dependencies = [
  "serde",
  "serde_json",
  "thiserror 1.0.69",
+ "tokio",
  "tracing",
  "url",
  "which",
@@ -3140,12 +3142,14 @@ dependencies = [
  "openmedia-svg",
  "openmedia-video",
  "rmcp",
+ "schemars",
  "serde",
  "serde_json",
  "thiserror 2.0.18",
  "tokio",
  "tracing",
  "tracing-subscriber",
+ "uuid",
 ]
 
 [[package]]
@@ -3168,12 +3172,14 @@ dependencies = [
 name = "openmedia-svg"
 version = "0.1.0"
 dependencies = [
+ "image",
  "openmedia-core",
  "resvg",
  "serde",
  "serde_json",
  "svg",
  "thiserror 2.0.18",
+ "tiny-skia",
  "tokio",
  "tracing",
  "uuid",
@@ -3185,6 +3191,7 @@ version = "0.1.0"
 dependencies = [
  "async-trait",
  "chromiumoxide",
+ "futures",
  "image",
  "openmedia-animate",
  "openmedia-core",
@@ -3198,6 +3205,7 @@ dependencies = [
  "tiny-skia",
  "tokio",
  "tracing",
+ "uuid",
 ]
 
 [[package]]
