@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v0.0.3] - 2026-06-22
+
+### Added
+- **SVG Animation Engine (`openmedia-animate`)**: Implemented complete SMIL XML tags serialization (`<animate>`, `<animateTransform>`, `<animateMotion>`, `<set>`), CSS `@keyframes` styling block builders, sequential/parallel/staggered timelines coordinate resolvers, dynamic path coordinate morphing with vertex equalizing, and Lottie layers parsing.
+- **MCP Animation Tools**: Exposed 6 new animation tools over the stdio interface: `animate_svg`, `animate_create_timeline`, `animate_morph_paths`, `animate_generate_spinner`, `animate_from_lottie`, and `animate_to_lottie`.
+- **Integrated Verification Suites**: Added comprehensive unit tests and integration tests covering animation presets, timeline offsets, morph frames interpolation, and JSON schema derivations.
+
+### Fixed
+- Fixed compiler borrowing errors (E0382) and suppressed unused variables/redundant initializations in `openmedia-mcp` to ensure a warnings-free compile across the workspace.
+
 ## [v0.0.2] - 2026-06-22
 
 ### Added
