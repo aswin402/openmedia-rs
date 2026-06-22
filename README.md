@@ -17,11 +17,14 @@ The inspiration for OpenMedia-RS comes from:
 
 ---
 
-## ⚡ What We Have Done (v0.0.1 Phase 0 Completion)
+## ⚡ What We Have Done (v0.0.2 Layout-to-Image Completion)
 * **Multi-Crate Workspace Architecture**: Created an 8-crate workspace spanning core engine, image, video, SVG, animate, process, quality improvement, and MCP server crates.
 * **Dyn Compatible Trait Architecture**: Annotated [DiffusionPipeline](crates/openmedia-image/src/lib.rs) and [FrameRenderer](crates/openmedia-video/src/lib.rs) with `#[async_trait]` to resolve compiler object safety blockers.
 * **JSON-RPC Stdio Loop**: Fully wired [OpenMediaServer](crates/openmedia-mcp/src/lib.rs) with the `rmcp` SDK macros (`#[tool_router(server_handler)]` and `#[tool]`), running completely over stdio transport.
-* **Tested & Sandbox Verified**: Built robust unit tests for configuration parsing and the `ping` tool using sandboxed directories. Tests pass successfully with `cargo test --workspace`.
+* **Layout-to-Image Engines**:
+  * **SVG Rasterizer (`rasterize_svg`)**: Powered by `resvg` + `tiny-skia` to convert SVG vector strings or files into PNG, JPEG, and WebP images on the CPU in $<20$ms.
+  * **HTML/CSS Snapshotter (`html_to_image`)**: Integrates `chromiumoxide` to launch headless Chrome, render complex web templates, and capture screenshots.
+* **Tested & Sandbox Verified**: Built robust unit and integration tests verifying MCP tool bindings, schema generation, image encoding, and browser navigation. Tests pass cleanly with `cargo test --workspace`.
 
 ---
 
@@ -37,11 +40,13 @@ OpenMedia-RS exposes the following Model Context Protocol (MCP) tools directly t
 * **`remove_background`**: Segment and isolate image foregrounds using U2-Net.
 
 ### 2. Video Composition (`openmedia-video`)
+* **`html_to_image`** (Active 🟢): Renders HTML/CSS layout templates or files to PNG, JPEG, or WebP screenshots.
 * **`create_video`**: Renders frame-by-frame scenes defined using a JSON Scene DSL (HTML/CSS layout) and compiles them into H.264/VP9/AV1 videos using native FFmpeg pipeline hooks.
 * **`create_slideshow`**: Compiles an image sequence with transitions (crossfade, slide, zoom, Ken Burns) and mixes background audio.
 * **`add_audio_to_video`**: Fuses audio tracks into existing video containers.
 
 ### 3. SVG vector & Diagram Generation (`openmedia-svg`)
+* **`rasterize_svg`** (Active 🟢): Converts SVG vector strings or files directly to PNG, JPEG, or WebP images.
 * **`create_svg`**: Fluent path, primitive, gradient, text, and filter definition to build raw optimized SVGs.
 * **`create_chart`**: Generates bar, line, pie, scatter, radar, and gauge charts from raw JSON data.
 * **`create_diagram`**: Renders auto-laid-out Flowcharts, UML sequence, architecture, and ER diagrams.

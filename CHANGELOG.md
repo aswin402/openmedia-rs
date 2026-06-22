@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v0.0.2] - 2026-06-22
+
+### Added
+- **SVG Rasterization Engine (`rasterize_svg`)**: Powered by `resvg` and `tiny-skia` with aspect-ratio-aware dimensions matching, custom scale transform calculations, and alpha channel demultiplexing supporting PNG, JPEG, and WebP exports.
+- **HTML/CSS Screenshot Engine (`html_to_image`)**: Integrates `chromiumoxide` to drive headless Chrome over a native Tokio runtime, rendering HTML page contents and capturing high-performance screenshots.
+- **MCP Tool Registration**: Bound both tools in `OpenMediaServer` with `schemars::JsonSchema` inputs and `rmcp::handler::server::wrapper::Json<serde_json::Value>` outputs for self-documenting JSON schemas.
+- **Animated SVG Logo**: Created a glowing animated SVG logo (`assets/logo.svg`) with a transparent background using inline CSS keyframes for rotation, pulsing, and wave animation.
+- **Workspace Integration Tests**: Added verification suites for SVG raster scaling and headless browser navigation.
+
 ## [v0.0.1] - 2026-06-22
 
 ### Project Vision
