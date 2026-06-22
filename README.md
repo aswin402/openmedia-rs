@@ -1,7 +1,7 @@
 # OpenMedia-RS
 
 <p align="center">
-  <img src="assets/logo.jpg" alt="OpenMedia-RS Logo" width="300px" />
+  <img src="assets/logo.svg" alt="OpenMedia-RS Logo" width="300px" />
 </p>
 
 > **A Rust-native Model Context Protocol (MCP) server suite that gives AI agents the power to generate, process, and refine images, videos, SVGs, and animations — entirely offline, on consumer hardware.**

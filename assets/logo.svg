@@ -1,0 +1,123 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300" width="300" height="300">
+  <defs>
+    <!-- Gradients -->
+    <linearGradient id="grad-primary" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ec4899" /> <!-- Pink -->
+      <stop offset="50%" stop-color="#8b5cf6" /> <!-- Purple -->
+      <stop offset="100%" stop-color="#3b82f6" /> <!-- Blue -->
+    </linearGradient>
+    <linearGradient id="grad-secondary" x1="100%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#06b6d4" /> <!-- Cyan -->
+      <stop offset="100%" stop-color="#8b5cf6" /> <!-- Purple -->
+    </linearGradient>
+    <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#8b5cf6" stop-opacity="0.3" />
+      <stop offset="100%" stop-color="#8b5cf6" stop-opacity="0" />
+    </radialGradient>
+    
+    <!-- Filters for Glow -->
+    <filter id="neon-glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="6" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+
+  <style>
+    .spin-cw {
+      transform-origin: 150px 150px;
+      animation: spin-cw-anim 25s linear infinite;
+    }
+    .spin-ccw {
+      transform-origin: 150px 150px;
+      animation: spin-ccw-anim 20s linear infinite;
+    }
+    .pulse-glow {
+      transform-origin: 150px 150px;
+      animation: pulse-glow-anim 4s ease-in-out infinite;
+    }
+    .wave-flow {
+      stroke-dasharray: 400;
+      stroke-dashoffset: 400;
+      animation: wave-flow-anim 6s ease-in-out infinite alternate;
+    }
+
+    @keyframes spin-cw-anim {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    @keyframes spin-ccw-anim {
+      0% { transform: rotate(360deg); }
+      100% { transform: rotate(0deg); }
+    }
+    @keyframes pulse-glow-anim {
+      0%, 100% { transform: scale(1); opacity: 0.6; filter: drop-shadow(0 0 5px rgba(139, 92, 246, 0.4)); }
+      50% { transform: scale(1.04); opacity: 0.95; filter: drop-shadow(0 0 15px rgba(236, 72, 153, 0.7)); }
+    }
+    @keyframes wave-flow-anim {
+      0% { stroke-dashoffset: 400; }
+      100% { stroke-dashoffset: 0; }
+    }
+  </style>
+
+  <!-- Background radial glow -->
+  <circle cx="150" cy="150" r="120" fill="url(#glow)" />
+
+  <!-- Outer Tech Circle 1 (Thin Segmented Ring, CW) -->
+  <circle class="spin-cw" cx="150" cy="150" r="125" 
+          fill="none" stroke="url(#grad-primary)" stroke-width="1.5" 
+          stroke-dasharray="8 12 40 12" stroke-opacity="0.4" />
+
+  <!-- Outer Tech Circle 2 (Medium Dashed Ring, CCW) -->
+  <circle class="spin-ccw" cx="150" cy="150" r="115" 
+          fill="none" stroke="url(#grad-secondary)" stroke-width="2.5" 
+          stroke-dasharray="60 30" stroke-opacity="0.6" />
+
+  <!-- Gear Teeth Ring (Stylized Rust Gear representation, CW) -->
+  <g class="spin-cw" opacity="0.3">
+    <!-- Circle with thick dash to look like gear teeth -->
+    <circle cx="150" cy="150" r="105" 
+            fill="none" stroke="url(#grad-primary)" stroke-width="5" 
+            stroke-dasharray="10 15" />
+  </g>
+
+  <!-- Glowing Central Core Circle (Pulsing) -->
+  <circle class="pulse-glow" cx="150" cy="150" r="80" 
+          fill="none" stroke="url(#grad-primary)" stroke-width="2.5" 
+          filter="url(#neon-glow)" />
+
+  <!-- Media Shutter / Camera Aperture inside Core (Pulsing & Rotates slightly) -->
+  <g class="pulse-glow" filter="url(#neon-glow)">
+    <!-- Play symbol / Prism -->
+    <path d="M 135 110 L 185 150 L 135 190 Z" 
+          fill="url(#grad-primary)" 
+          stroke="url(#grad-secondary)" 
+          stroke-width="2" 
+          stroke-linejoin="round" />
+  </g>
+
+  <!-- Digital Audio/Video Wave passing through Play button (Flowing) -->
+  <path class="wave-flow" 
+        d="M 60 150 Q 105 100, 150 150 T 240 150" 
+        fill="none" 
+        stroke="url(#grad-secondary)" 
+        stroke-width="5" 
+        stroke-linecap="round" 
+        filter="url(#neon-glow)" />
+
+  <!-- Overlapping Wave 2 (Slightly offset, flowing differently) -->
+  <path class="wave-flow" 
+        d="M 60 150 Q 105 200, 150 150 T 240 150" 
+        fill="none" 
+        stroke="url(#grad-primary)" 
+        stroke-width="2.5" 
+        stroke-linecap="round" 
+        stroke-opacity="0.8" 
+        style="animation-delay: -3s;" />
+
+  <!-- Little orbital particles -->
+  <circle class="spin-cw" cx="150" cy="45" r="3" fill="#06b6d4" filter="url(#neon-glow)" />
+  <circle class="spin-ccw" cx="150" cy="255" r="3" fill="#ec4899" filter="url(#neon-glow)" />
+</svg>
