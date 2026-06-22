@@ -1,8 +1,7 @@
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use openmedia_core::{Config, HardwareInfo, ModelRegistry, OpenMediaError, Result as CoreResult};
-use openmedia_image::{DiffusionPipeline, DummyDiffusionPipeline};
-use openmedia_video::DummyFrameRenderer;
+use openmedia_core::{Config, HardwareInfo, ModelRegistry, Result as CoreResult};
+use openmedia_image::DiffusionPipeline;
 use openmedia_process::DummyGpuPipeline;
 use openmedia_improve::{ClipScorer, AestheticScorer, GenerationHistory, PromptRefiner};
 use rmcp::{tool, tool_router};

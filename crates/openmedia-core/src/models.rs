@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
-use crate::error::{OpenMediaError, Result};
+use crate::error::Result;
 use crate::hardware::HardwareInfo;
 
 /// Information about a single model file
@@ -57,6 +57,10 @@ pub struct ModelRegistry {
 }
 
 impl ModelRegistry {
+    /// Get the scanned model directory path
+    pub fn model_dir(&self) -> &PathBuf {
+        &self.model_dir
+    }
     /// Scan model directory and build registry
     pub async fn scan(model_dir: &PathBuf) -> Result<Self> {
         // Implement simple scanning of model_dir or just return an empty registry for Phase 0

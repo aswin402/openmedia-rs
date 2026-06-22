@@ -36,6 +36,7 @@ impl AestheticScorer {
 }
 
 pub struct GenerationHistory {
+    #[allow(dead_code)]
     conn: Mutex<Connection>,
 }
 

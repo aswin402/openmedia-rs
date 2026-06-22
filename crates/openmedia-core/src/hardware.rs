@@ -129,7 +129,7 @@ impl HardwareInfo {
         };
 
         // Simple default backends (CPU fallback always available)
-        let mut available_backends = vec![ComputeBackend::CpuOnly];
+        let available_backends = vec![ComputeBackend::CpuOnly];
 
         // Check if FFmpeg is available
         let ffmpeg_available = std::process::Command::new("ffmpeg")
