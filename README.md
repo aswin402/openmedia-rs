@@ -17,14 +17,21 @@ The inspiration for OpenMedia-RS comes from:
 
 ---
 
-## ⚡ What We Have Done (v0.0.2 Layout-to-Image Completion)
+## ⚡ What We Have Done (v0.0.3 SVG Animation Engine Completion)
 * **Multi-Crate Workspace Architecture**: Created an 8-crate workspace spanning core engine, image, video, SVG, animate, process, quality improvement, and MCP server crates.
 * **Dyn Compatible Trait Architecture**: Annotated [DiffusionPipeline](crates/openmedia-image/src/lib.rs) and [FrameRenderer](crates/openmedia-video/src/lib.rs) with `#[async_trait]` to resolve compiler object safety blockers.
 * **JSON-RPC Stdio Loop**: Fully wired [OpenMediaServer](crates/openmedia-mcp/src/lib.rs) with the `rmcp` SDK macros (`#[tool_router(server_handler)]` and `#[tool]`), running completely over stdio transport.
 * **Layout-to-Image Engines**:
   * **SVG Rasterizer (`rasterize_svg`)**: Powered by `resvg` + `tiny-skia` to convert SVG vector strings or files into PNG, JPEG, and WebP images on the CPU in $<20$ms.
   * **HTML/CSS Snapshotter (`html_to_image`)**: Integrates `chromiumoxide` to launch headless Chrome, render complex web templates, and capture screenshots.
-* **Tested & Sandbox Verified**: Built robust unit and integration tests verifying MCP tool bindings, schema generation, image encoding, and browser navigation. Tests pass cleanly with `cargo test --workspace`.
+* **SVG Animation Engine (`openmedia-animate`)**:
+  * **SMIL XML Writer**: Generates `<animate>`, `<animateTransform>`, `<animateMotion>`, `<set>` elements with target `href` links and duration/delay triggers.
+  * **CSS @keyframes Generator**: Handles keyframe percentages, target classes, iteration counts, fill modes, and animation shorthand.
+  * **Path Morphing**: Parses, equalizes vertex counts using collapse logic, and interpolates between two path data strings.
+  * **Sequencing Timeline**: Orchestrates sequential, parallel, and staggered animations by resolving absolute timings.
+  * **Lottie Converter**: Imports Lottie JSON and translates shape layers/keyframes into animated SVGs.
+* **6 Animation MCP Tools Registered**: Added `animate_svg`, `animate_create_timeline`, `animate_morph_paths`, `animate_generate_spinner`, `animate_from_lottie`, and `animate_to_lottie` to the stdio MCP transport interface.
+* **Tested & Sandbox Verified**: Built robust unit and integration tests verifying MCP tool bindings, schema generation, image encoding, and animation calculations. Tests pass cleanly with `cargo test --workspace`.
 
 ---
 
@@ -45,12 +52,20 @@ OpenMedia-RS exposes the following Model Context Protocol (MCP) tools directly t
 * **`create_slideshow`**: Compiles an image sequence with transitions (crossfade, slide, zoom, Ken Burns) and mixes background audio.
 * **`add_audio_to_video`**: Fuses audio tracks into existing video containers.
 
-### 3. SVG vector & Diagram Generation (`openmedia-svg`)
+### 3. SVG Vector & Diagram Generation (`openmedia-svg`)
 * **`rasterize_svg`** (Active 🟢): Converts SVG vector strings or files directly to PNG, JPEG, or WebP images.
 * **`create_svg`**: Fluent path, primitive, gradient, text, and filter definition to build raw optimized SVGs.
 * **`create_chart`**: Generates bar, line, pie, scatter, radar, and gauge charts from raw JSON data.
 * **`create_diagram`**: Renders auto-laid-out Flowcharts, UML sequence, architecture, and ER diagrams.
 * **`create_icon`**: Accesses a built-in library of ~200 customizable icons.
+
+### 4. SVG Animation (`openmedia-animate`)
+* **`animate_svg`** (Active 🟢): Apply animation presets (such as fade_in, spin, bounce, pulse, typewriter, draw_path) to SVG elements.
+* **`animate_create_timeline`** (Active 🟢): Sequentially or concurrently coordinate animations of multiple elements.
+* **`animate_morph_paths`** (Active 🟢): Interpolate morph frames between two path data strings.
+* **`animate_generate_spinner`** (Active 🟢): Generate beautiful animated loading spinner SVGs.
+* **`animate_from_lottie`** (Active 🟢): Import Lottie JSON and convert to an animated SVG.
+* **`animate_to_lottie`** (Active 🟢): Export SVG to Lottie JSON.
 
 ---
 
