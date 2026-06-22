@@ -8,6 +8,7 @@ use rmcp::{tool, tool_router};
 pub use rmcp::handler::server::wrapper::{Parameters, Json};
 use serde::{Deserialize, Serialize};
 use schemars::JsonSchema;
+use openmedia_video::{VideoScene, SceneElement, FrameRenderer};
 
 /// Main MCP server for OpenMedia
 #[derive(Clone)]
@@ -235,6 +236,116 @@ pub struct ImageBatchProcessRequest {
     pub operations: Vec<serde_json::Value>,
     /// Target output directory
     pub output_dir: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct VideoCreateRequest {
+    /// VideoScene definition (inline JSON or file path)
+    pub scene: serde_json::Value,
+    /// Output file path (optional)
+    pub output_path: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct VideoCreateSlideshowRequest {
+    /// List of image file paths or directories
+    pub images: Vec<String>,
+    /// Duration per image in seconds (default 3.0)
+    pub duration_per_image: Option<f64>,
+    /// Transition type (crossfade, slide_left, slide_right, etc. default crossfade)
+    pub transition_type: Option<String>,
+    /// Transition duration in seconds (default 0.5)
+    pub transition_duration: Option<f64>,
+    /// Background music audio track path (optional)
+    pub audio_src: Option<String>,
+    /// Output width (default 1920)
+    pub width: Option<u32>,
+    /// Output height (default 1080)
+    pub height: Option<u32>,
+    /// Frames per second (default 30)
+    pub fps: Option<u32>,
+    /// Output path (optional)
+    pub output_path: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct VideoAddTransitionRequest {
+    /// Path to the video scene JSON file
+    pub scene_path: String,
+    /// Source scene ID
+    pub from_scene_id: String,
+    /// Target scene ID
+    pub to_scene_id: String,
+    /// Transition type
+    pub transition_type: String,
+    /// Transition duration in seconds (default 0.5)
+    pub duration: Option<f64>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct VideoAddAudioRequest {
+    /// Path to input video file or scene JSON file
+    pub target_path: String,
+    /// Path to the audio file
+    pub audio_path: String,
+    /// Start time in video (default 0.0)
+    pub start_time: Option<f64>,
+    /// Volume (0.0 to 1.0, default 1.0)
+    pub volume: Option<f32>,
+    /// Fade in duration in seconds (default 0.0)
+    pub fade_in: Option<f64>,
+    /// Fade out duration in seconds (default 0.0)
+    pub fade_out: Option<f64>,
+    /// Output path (optional)
+    pub output_path: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct VideoFromTemplateRequest {
+    /// Template name (slideshow, text_explainer, data_dashboard, social_media, product_showcase)
+    pub template_name: String,
+    /// Template parameters as dynamic JSON key-values
+    pub parameters: serde_json::Value,
+    /// Output path (optional)
+    pub output_path: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct VideoPreviewRequest {
+    /// VideoScene definition (inline JSON or file path)
+    pub scene: serde_json::Value,
+    /// Time offset in seconds (default 0.0)
+    pub time: Option<f64>,
+    /// Target width
+    pub width: Option<u32>,
+    /// Target height
+    pub height: Option<u32>,
+    /// Output format (png, jpeg)
+    pub output_format: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct VideoExtractFramesRequest {
+    /// Path to input video file
+    pub video_path: String,
+    /// Time offsets in seconds
+    pub offsets: Vec<f64>,
+    /// Output directory for extracted frames
+    pub output_dir: String,
+    /// Output format (png, jpeg)
+    pub format: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct VideoTrimRequest {
+    /// Path to input video file
+    pub video_path: String,
+    /// Start time in seconds
+    pub start_time: f64,
+    /// End time in seconds
+    pub end_time: f64,
+    /// Output path (optional)
+    pub output_path: Option<String>,
 }
 
 // Helper functions for SVG Animation MCP Tools
@@ -504,7 +615,7 @@ impl OpenMediaServer {
                 for anim in anims {
                     xml_block.push_str("  ");
                     xml_block.push_str(&anim.to_xml(Some(&req.element_id)));
-                    xml_block.push_str("\n");
+                    xml_block.push('\n');
                 }
                 (inject_style_or_xml(svg_content, &xml_block), animation_count)
             }
@@ -519,7 +630,7 @@ impl OpenMediaServer {
                 for anim in &smil {
                     xml_block.push_str("  ");
                     xml_block.push_str(&anim.to_xml(Some(&req.element_id)));
-                    xml_block.push_str("\n");
+                    xml_block.push('\n');
                 }
                 (inject_style_or_xml(animated_svg, &xml_block), (smil.len() + 1) as u32)
             }
@@ -1106,6 +1217,733 @@ impl OpenMediaServer {
         }).collect();
 
         serde_json::to_value(outputs).map(Json).map_err(|e| e.to_string())
+    }
+
+    #[tool(
+        name = "video_create",
+        description = "Compile a video from a full VideoScene JSON description. Supports transitions and audio mixing."
+    )]
+    pub async fn video_create(
+        &self,
+        params: Parameters<VideoCreateRequest>,
+    ) -> Result<Json<serde_json::Value>, String> {
+        let req = params.0;
+        let scene: VideoScene = if req.scene.is_string() {
+            let path_str = req.scene.as_str().unwrap();
+            let path = std::path::Path::new(path_str);
+            if path.exists() && path.is_file() {
+                let s = std::fs::read_to_string(path).map_err(|e| e.to_string())?;
+                serde_json::from_str(&s).map_err(|e| e.to_string())?
+            } else {
+                serde_json::from_value(req.scene.clone()).map_err(|e| e.to_string())?
+            }
+        } else {
+            serde_json::from_value(req.scene.clone()).map_err(|e| e.to_string())?
+        };
+
+        let output_path = if let Some(out_p) = req.output_path {
+            std::path::PathBuf::from(out_p)
+        } else {
+            let filename = format!("{}.mp4", uuid::Uuid::now_v7());
+            self.config.paths.output_dir.join(filename)
+        };
+
+        let _ = std::fs::create_dir_all(&self.config.paths.output_dir);
+        
+        let video_spec = openmedia_video::render_video_scene(&scene, &output_path)
+            .await
+            .map_err(|e| e.to_string())?;
+
+        serde_json::to_value(video_spec)
+            .map(Json)
+            .map_err(|e| e.to_string())
+    }
+
+    #[tool(
+        name = "video_preview",
+        description = "Generate a preview frame image for a video scene at a given time offset."
+    )]
+    pub async fn video_preview(
+        &self,
+        params: Parameters<VideoPreviewRequest>,
+    ) -> Result<Json<serde_json::Value>, String> {
+        let req = params.0;
+        let scene: VideoScene = if req.scene.is_string() {
+            let path_str = req.scene.as_str().unwrap();
+            let path = std::path::Path::new(path_str);
+            if path.exists() && path.is_file() {
+                let s = std::fs::read_to_string(path).map_err(|e| e.to_string())?;
+                serde_json::from_str(&s).map_err(|e| e.to_string())?
+            } else {
+                serde_json::from_value(req.scene.clone()).map_err(|e| e.to_string())?
+            }
+        } else {
+            serde_json::from_value(req.scene.clone()).map_err(|e| e.to_string())?
+        };
+
+        let t = req.time.unwrap_or(0.0);
+        let w = req.width.unwrap_or(scene.width);
+        let h = req.height.unwrap_or(scene.height);
+        let format = req.output_format.unwrap_or_else(|| "png".to_string());
+        
+        let use_browser = scene.scenes.iter().any(|s| {
+            s.elements.iter().any(|el| {
+                matches!(el, SceneElement::Html { .. } | SceneElement::Code { .. })
+            })
+        });
+
+        let frame = if use_browser {
+            let renderer = openmedia_video::BrowserFrameRenderer::launch().await.map_err(|e| e.to_string())?;
+            let f = renderer.render_frame(&scene, t, w, h).await.map_err(|e| e.to_string())?;
+            renderer.close().await;
+            f
+        } else {
+            let renderer = openmedia_video::SvgFrameRenderer;
+            renderer.render_frame(&scene, t, w, h).await.map_err(|e| e.to_string())?
+        };
+
+        let filename = format!("{}.{}", uuid::Uuid::now_v7(), format);
+        let output_path = self.config.paths.output_dir.join(filename);
+        let _ = std::fs::create_dir_all(&self.config.paths.output_dir);
+        
+        let mut bytes = Vec::new();
+        let img_format = match format.to_lowercase().as_str() {
+            "png" => image::ImageFormat::Png,
+            "jpeg" | "jpg" => image::ImageFormat::Jpeg,
+            "webp" => image::ImageFormat::WebP,
+            other => return Err(format!("Unsupported preview output format: {}", other)),
+        };
+        frame.write_to(&mut std::io::Cursor::new(&mut bytes), img_format)
+            .map_err(|e| e.to_string())?;
+        std::fs::write(&output_path, &bytes).map_err(|e| e.to_string())?;
+
+        let file_size = std::fs::metadata(&output_path).map(|m| m.len()).unwrap_or(0);
+        let output = openmedia_core::ImageOutput {
+            path: output_path,
+            width: w,
+            height: h,
+            seed: 0,
+            format,
+            file_size,
+            generation_id: uuid::Uuid::now_v7().to_string(),
+            clip_score: None,
+            aesthetic_score: None,
+            model_used: "none".to_string(),
+            backend_used: if use_browser { "headless-chrome" } else { "svg" }.to_string(),
+            generation_time: 0.0,
+        };
+
+        serde_json::to_value(output)
+            .map(Json)
+            .map_err(|e| e.to_string())
+    }
+
+    #[tool(
+        name = "video_create_slideshow",
+        description = "Quickly compile a slideshow video from a list of image paths or directory path, with options for transitions and audio."
+    )]
+    pub async fn video_create_slideshow(
+        &self,
+        params: Parameters<VideoCreateSlideshowRequest>,
+    ) -> Result<Json<serde_json::Value>, String> {
+        let req = params.0;
+        let duration_per_image = req.duration_per_image.unwrap_or(3.0);
+        let trans_type_str = req.transition_type.unwrap_or_else(|| "crossfade".to_string());
+        let trans_duration = req.transition_duration.unwrap_or(0.5);
+        
+        let width = req.width.unwrap_or(1920);
+        let height = req.height.unwrap_or(1080);
+        let fps = req.fps.unwrap_or(30);
+
+        // Resolve images
+        let mut resolved_images = Vec::new();
+        for path_str in req.images {
+            let path = std::path::Path::new(&path_str);
+            if path.is_dir() {
+                let entries = std::fs::read_dir(path).map_err(|e| e.to_string())?;
+                for entry in entries.flatten() {
+                    let p = entry.path();
+                    if p.is_file() {
+                        if let Some(ext) = p.extension().and_then(|e| e.to_str()) {
+                            match ext.to_lowercase().as_str() {
+                                "png" | "jpg" | "jpeg" | "webp" => {
+                                    resolved_images.push(p.to_string_lossy().into_owned());
+                                }
+                                _ => {}
+                            }
+                        }
+                    }
+                }
+            } else {
+                resolved_images.push(path_str);
+            }
+        }
+
+        if resolved_images.is_empty() {
+            return Err("No valid images found for slideshow".to_string());
+        }
+
+        // Construct VideoScene DSL
+        let mut scenes = Vec::new();
+        let mut transitions = Vec::new();
+
+        let mut current_time = 0.0;
+        for (i, img_src) in resolved_images.iter().enumerate() {
+            let scene_id = format!("slide_{}", i);
+            let start = current_time;
+            let end = start + duration_per_image;
+            
+            let element = openmedia_video::SceneElement::Image {
+                src: img_src.clone(),
+                position: openmedia_video::Position {
+                    x: openmedia_video::DimensionValue::Pixels(0.0),
+                    y: openmedia_video::DimensionValue::Pixels(0.0),
+                },
+                size: openmedia_video::Size {
+                    width: openmedia_video::DimensionValue::Percentage("100%".to_string()),
+                    height: openmedia_video::DimensionValue::Percentage("100%".to_string()),
+                },
+                fit: openmedia_video::ObjectFit::Contain,
+                timeline: None,
+            };
+
+            scenes.push(openmedia_video::Scene {
+                id: scene_id.clone(),
+                start,
+                end,
+                elements: vec![element],
+            });
+
+            if i > 0 {
+                let from = format!("slide_{}", i - 1);
+                let to = scene_id;
+                let transition_type = match trans_type_str.to_lowercase().as_str() {
+                    "none" => openmedia_video::TransitionType::None,
+                    "crossfade" => openmedia_video::TransitionType::Crossfade,
+                    "slide_left" => openmedia_video::TransitionType::SlideLeft,
+                    "slide_right" => openmedia_video::TransitionType::SlideRight,
+                    "slide_up" => openmedia_video::TransitionType::SlideUp,
+                    "slide_down" => openmedia_video::TransitionType::SlideDown,
+                    "wipe_left" => openmedia_video::TransitionType::WipeLeft,
+                    "wipe_right" => openmedia_video::TransitionType::WipeRight,
+                    _ => openmedia_video::TransitionType::Crossfade,
+                };
+                transitions.push(openmedia_video::SceneTransition {
+                    from,
+                    to,
+                    transition_type,
+                    duration: trans_duration,
+                    easing: None,
+                });
+            }
+
+            current_time = end - trans_duration;
+        }
+
+        let total_duration = current_time + trans_duration;
+
+        let audio = req.audio_src.map(|src| openmedia_video::AudioConfig {
+            tracks: vec![openmedia_video::AudioTrack {
+                src,
+                start: 0.0,
+                volume: 1.0,
+                fade_in: Some(1.0),
+                fade_out: Some(1.0),
+            }],
+        });
+
+        let scene = openmedia_video::VideoScene {
+            width,
+            height,
+            fps,
+            duration: total_duration,
+            background: "#000000".to_string(),
+            scenes,
+            transitions,
+            audio,
+        };
+
+        let output_path = if let Some(out_p) = req.output_path {
+            std::path::PathBuf::from(out_p)
+        } else {
+            let filename = format!("{}.mp4", uuid::Uuid::now_v7());
+            self.config.paths.output_dir.join(filename)
+        };
+
+        let _ = std::fs::create_dir_all(&self.config.paths.output_dir);
+
+        let video_spec = openmedia_video::render_video_scene(&scene, &output_path)
+            .await
+            .map_err(|e| e.to_string())?;
+
+        serde_json::to_value(video_spec)
+            .map(Json)
+            .map_err(|e| e.to_string())
+    }
+
+    #[tool(
+        name = "video_add_transition",
+        description = "Add a transition between two scenes in an existing video scene JSON file."
+    )]
+    pub async fn video_add_transition(
+        &self,
+        params: Parameters<VideoAddTransitionRequest>,
+    ) -> Result<Json<serde_json::Value>, String> {
+        let req = params.0;
+        let path = std::path::Path::new(&req.scene_path);
+        if !path.exists() || !path.is_file() {
+            return Err(format!("Scene file not found: {}", req.scene_path));
+        }
+
+        let s = std::fs::read_to_string(path).map_err(|e| e.to_string())?;
+        let mut scene: VideoScene = serde_json::from_str(&s).map_err(|e| e.to_string())?;
+
+        let duration = req.duration.unwrap_or(0.5);
+        let transition_type = match req.transition_type.to_lowercase().as_str() {
+            "none" => openmedia_video::TransitionType::None,
+            "crossfade" => openmedia_video::TransitionType::Crossfade,
+            "slide_left" => openmedia_video::TransitionType::SlideLeft,
+            "slide_right" => openmedia_video::TransitionType::SlideRight,
+            "slide_up" => openmedia_video::TransitionType::SlideUp,
+            "slide_down" => openmedia_video::TransitionType::SlideDown,
+            "wipe_left" => openmedia_video::TransitionType::WipeLeft,
+            "wipe_right" => openmedia_video::TransitionType::WipeRight,
+            _ => openmedia_video::TransitionType::Crossfade,
+        };
+
+        scene.transitions.retain(|t| !(t.from == req.from_scene_id && t.to == req.to_scene_id));
+
+        scene.transitions.push(openmedia_video::SceneTransition {
+            from: req.from_scene_id,
+            to: req.to_scene_id,
+            transition_type,
+            duration,
+            easing: None,
+        });
+
+        let updated = serde_json::to_string_pretty(&scene).map_err(|e| e.to_string())?;
+        std::fs::write(path, updated).map_err(|e| e.to_string())?;
+
+        serde_json::to_value(scene)
+            .map(Json)
+            .map_err(|e| e.to_string())
+    }
+
+    #[tool(
+        name = "video_add_audio",
+        description = "Add an audio track to an existing video file or video scene JSON description."
+    )]
+    pub async fn video_add_audio(
+        &self,
+        params: Parameters<VideoAddAudioRequest>,
+    ) -> Result<Json<serde_json::Value>, String> {
+        let req = params.0;
+        let target = std::path::Path::new(&req.target_path);
+        if !target.exists() {
+            return Err(format!("Target path not found: {}", req.target_path));
+        }
+
+        let start_time = req.start_time.unwrap_or(0.0);
+        let volume = req.volume.unwrap_or(1.0);
+
+        if target.is_file() && req.target_path.ends_with(".json") {
+            let s = std::fs::read_to_string(target).map_err(|e| e.to_string())?;
+            let mut scene: VideoScene = serde_json::from_str(&s).map_err(|e| e.to_string())?;
+            
+            let track = openmedia_video::AudioTrack {
+                src: req.audio_path,
+                start: start_time,
+                volume,
+                fade_in: req.fade_in,
+                fade_out: req.fade_out,
+            };
+
+            if let Some(audio_cfg) = &mut scene.audio {
+                audio_cfg.tracks.push(track);
+            } else {
+                scene.audio = Some(openmedia_video::AudioConfig { tracks: vec![track] });
+            }
+
+            let updated = serde_json::to_string_pretty(&scene).map_err(|e| e.to_string())?;
+            std::fs::write(target, updated).map_err(|e| e.to_string())?;
+
+            return serde_json::to_value(scene)
+                .map(Json)
+                .map_err(|e| e.to_string());
+        }
+
+        let output_path = if let Some(out_p) = req.output_path {
+            std::path::PathBuf::from(out_p)
+        } else {
+            let filename = format!("{}.mp4", uuid::Uuid::now_v7());
+            self.config.paths.output_dir.join(filename)
+        };
+
+        let _ = std::fs::create_dir_all(&self.config.paths.output_dir);
+
+        let delay_ms = (start_time * 1000.0) as i32;
+        let filter_script = format!(
+            "[1:a]adelay={}|{},volume={}[a1];[0:a][a1]amix=inputs=2:duration=first[out_a]",
+            delay_ms, delay_ms, volume
+        );
+
+        let mut cmd = tokio::process::Command::new("ffmpeg");
+        cmd.args([
+            "-y",
+            "-i", &req.target_path,
+            "-i", &req.audio_path,
+            "-filter_complex", &filter_script,
+            "-map", "0:v",
+            "-map", "[out_a]",
+            "-c:v", "copy",
+            "-c:a", "aac",
+        ])
+        .arg(&output_path);
+
+        cmd.stdout(std::process::Stdio::null())
+           .stderr(std::process::Stdio::null());
+
+        let mut child = cmd.spawn().map_err(|e| e.to_string())?;
+        child.wait().await.map_err(|e| e.to_string())?;
+
+        let file_size = std::fs::metadata(&output_path).map(|m| m.len()).unwrap_or(0);
+        let output = openmedia_core::VideoSpec {
+            path: output_path,
+            width: 0,
+            height: 0,
+            duration: 0.0,
+            fps: 0,
+            codec: "copy".to_string(),
+            file_size,
+            generation_id: uuid::Uuid::now_v7().to_string(),
+            renderer_used: "ffmpeg".to_string(),
+            total_frames: 0,
+            generation_time: 0.0,
+        };
+
+        serde_json::to_value(output)
+            .map(Json)
+            .map_err(|e| e.to_string())
+    }
+
+    #[tool(
+        name = "video_from_template",
+        description = "Instantiate a video scene from one of the pre-designed templates (slideshow, text_explainer, data_dashboard, social_media, product_showcase)."
+    )]
+    pub async fn video_from_template(
+        &self,
+        params: Parameters<VideoFromTemplateRequest>,
+    ) -> Result<Json<serde_json::Value>, String> {
+        let req = params.0;
+        let output_path = if let Some(out_p) = req.output_path {
+            std::path::PathBuf::from(out_p)
+        } else {
+            let filename = format!("{}.mp4", uuid::Uuid::now_v7());
+            self.config.paths.output_dir.join(filename)
+        };
+        
+        let _ = std::fs::create_dir_all(&self.config.paths.output_dir);
+        
+        let scene = match req.template_name.to_lowercase().as_str() {
+            "slideshow" => {
+                let images = req.parameters["images"].as_array()
+                    .ok_or_else(|| "Missing parameters.images array".to_string())?
+                    .iter()
+                    .map(|v| v.as_str().unwrap_or("").to_string())
+                    .collect::<Vec<_>>();
+                let duration = req.parameters["duration_per_image"].as_f64().unwrap_or(3.0);
+                let width = req.parameters["width"].as_u64().unwrap_or(1920) as u32;
+                let height = req.parameters["height"].as_u64().unwrap_or(1080) as u32;
+                let fps = req.parameters["fps"].as_u64().unwrap_or(30) as u32;
+                
+                let mut scenes = Vec::new();
+                for (i, img_src) in images.iter().enumerate() {
+                    scenes.push(openmedia_video::Scene {
+                        id: format!("slide_{}", i),
+                        start: i as f64 * duration,
+                        end: (i + 1) as f64 * duration,
+                        elements: vec![openmedia_video::SceneElement::Image {
+                            src: img_src.clone(),
+                            position: openmedia_video::Position {
+                                x: openmedia_video::DimensionValue::Pixels(0.0),
+                                y: openmedia_video::DimensionValue::Pixels(0.0),
+                            },
+                            size: openmedia_video::Size {
+                                width: openmedia_video::DimensionValue::Percentage("100%".to_string()),
+                                height: openmedia_video::DimensionValue::Percentage("100%".to_string()),
+                            },
+                            fit: openmedia_video::ObjectFit::Contain,
+                            timeline: None,
+                        }],
+                    });
+                }
+                openmedia_video::VideoScene {
+                    width,
+                    height,
+                    fps,
+                    duration: images.len() as f64 * duration,
+                    background: "#000000".to_string(),
+                    scenes,
+                    transitions: vec![],
+                    audio: None,
+                }
+            }
+            "text_explainer" => {
+                let title = req.parameters["title"].as_str().unwrap_or("Explainer Video").to_string();
+                let bullets = req.parameters["bullets"].as_array()
+                    .ok_or_else(|| "Missing parameters.bullets array".to_string())?
+                    .iter()
+                    .map(|v| v.as_str().unwrap_or("").to_string())
+                    .collect::<Vec<_>>();
+                let bullet_duration = req.parameters["bullet_duration"].as_f64().unwrap_or(3.0);
+                let width = req.parameters["width"].as_u64().unwrap_or(1920) as u32;
+                let height = req.parameters["height"].as_u64().unwrap_or(1080) as u32;
+                let fps = req.parameters["fps"].as_u64().unwrap_or(30) as u32;
+
+                let mut scenes = Vec::new();
+                let total_duration = (bullets.len() + 1) as f64 * bullet_duration;
+
+                let s0_elements = vec![openmedia_video::SceneElement::Text {
+                    content: title.clone(),
+                    style: openmedia_video::TextStyle {
+                        font_family: "sans-serif".to_string(),
+                        font_size: 48.0,
+                        font_weight: 700,
+                        color: "#ffffff".to_string(),
+                        text_align: "center".to_string(),
+                        line_height: None,
+                        letter_spacing: None,
+                    },
+                    position: openmedia_video::Position {
+                        x: openmedia_video::DimensionValue::Pixels((width / 2) as f64),
+                        y: openmedia_video::DimensionValue::Pixels(150.0),
+                    },
+                    anchor: openmedia_video::Anchor::Center,
+                    timeline: None,
+                }];
+                scenes.push(openmedia_video::Scene {
+                    id: "scene_0".to_string(),
+                    start: 0.0,
+                    end: bullet_duration,
+                    elements: s0_elements.clone(),
+                });
+
+                for i in 0..bullets.len() {
+                    let mut el = s0_elements.clone();
+                    for (j, bullet_text) in bullets.iter().enumerate().take(i + 1) {
+                        el.push(openmedia_video::SceneElement::Text {
+                            content: format!("• {}", bullet_text),
+                            style: openmedia_video::TextStyle {
+                                font_family: "sans-serif".to_string(),
+                                font_size: 32.0,
+                                font_weight: 400,
+                                color: "#cccccc".to_string(),
+                                text_align: "left".to_string(),
+                                line_height: None,
+                                letter_spacing: None,
+                            },
+                            position: openmedia_video::Position {
+                                x: openmedia_video::DimensionValue::Pixels(200.0),
+                                y: openmedia_video::DimensionValue::Pixels(300.0 + j as f64 * 80.0),
+                            },
+                            anchor: openmedia_video::Anchor::TopLeft,
+                            timeline: None,
+                        });
+                    }
+                    scenes.push(openmedia_video::Scene {
+                        id: format!("scene_{}", i + 1),
+                        start: (i + 1) as f64 * bullet_duration,
+                        end: (i + 2) as f64 * bullet_duration,
+                        elements: el,
+                    });
+                }
+
+                openmedia_video::VideoScene {
+                    width,
+                    height,
+                    fps,
+                    duration: total_duration,
+                    background: "#1a1a2e".to_string(),
+                    scenes,
+                    transitions: vec![],
+                    audio: None,
+                }
+            }
+            _ => {
+                let width = req.parameters["width"].as_u64().unwrap_or(1920) as u32;
+                let height = req.parameters["height"].as_u64().unwrap_or(1080) as u32;
+                let fps = req.parameters["fps"].as_u64().unwrap_or(30) as u32;
+                openmedia_video::VideoScene {
+                    width,
+                    height,
+                    fps,
+                    duration: 3.0,
+                    background: "#333333".to_string(),
+                    scenes: vec![openmedia_video::Scene {
+                        id: "scene_0".to_string(),
+                        start: 0.0,
+                        end: 3.0,
+                        elements: vec![openmedia_video::SceneElement::Text {
+                            content: format!("Template: {}", req.template_name),
+                            style: openmedia_video::TextStyle {
+                                font_family: "sans-serif".to_string(),
+                                font_size: 36.0,
+                                font_weight: 400,
+                                color: "#ffffff".to_string(),
+                                text_align: "center".to_string(),
+                                line_height: None,
+                                letter_spacing: None,
+                            },
+                            position: openmedia_video::Position {
+                                x: openmedia_video::DimensionValue::Pixels((width / 2) as f64),
+                                y: openmedia_video::DimensionValue::Pixels((height / 2) as f64),
+                            },
+                            anchor: openmedia_video::Anchor::Center,
+                            timeline: None,
+                        }],
+                    }],
+                    transitions: vec![],
+                    audio: None,
+                }
+            }
+        };
+
+        let video_spec = openmedia_video::render_video_scene(&scene, &output_path)
+            .await
+            .map_err(|e| e.to_string())?;
+
+        serde_json::to_value(video_spec)
+            .map(Json)
+            .map_err(|e| e.to_string())
+    }
+
+    #[tool(
+        name = "video_extract_frames",
+        description = "Extract keyframe images from a video file at specified time offsets."
+    )]
+    pub async fn video_extract_frames(
+        &self,
+        params: Parameters<VideoExtractFramesRequest>,
+    ) -> Result<Json<serde_json::Value>, String> {
+        let req = params.0;
+        let input = std::path::Path::new(&req.video_path);
+        if !input.exists() || !input.is_file() {
+            return Err(format!("Input video file not found: {}", req.video_path));
+        }
+
+        let output_dir = std::path::Path::new(&req.output_dir);
+        let _ = std::fs::create_dir_all(output_dir);
+        let format = req.format.unwrap_or_else(|| "png".to_string());
+        
+        let mut outputs = Vec::new();
+        
+        for (i, offset) in req.offsets.iter().enumerate() {
+            let filename = format!("frame_{}_{}.{}", i, uuid::Uuid::now_v7(), format);
+            let output_path = output_dir.join(filename);
+            
+            let mut cmd = tokio::process::Command::new("ffmpeg");
+            cmd.args([
+                "-y",
+                "-ss", &offset.to_string(),
+                "-i", &req.video_path,
+                "-vframes", "1",
+                &output_path.to_string_lossy(),
+            ]);
+
+            cmd.stdout(std::process::Stdio::null())
+               .stderr(std::process::Stdio::null());
+
+            let mut child = cmd.spawn().map_err(|e| e.to_string())?;
+            child.wait().await.map_err(|e| e.to_string())?;
+
+            if output_path.exists() {
+                let (w, h) = image::image_dimensions(&output_path).unwrap_or((0, 0));
+                let file_size = std::fs::metadata(&output_path).map(|m| m.len()).unwrap_or(0);
+                outputs.push(openmedia_core::ImageOutput {
+                    path: output_path,
+                    width: w,
+                    height: h,
+                    seed: 0,
+                    format: format.clone(),
+                    file_size,
+                    generation_id: uuid::Uuid::now_v7().to_string(),
+                    clip_score: None,
+                    aesthetic_score: None,
+                    model_used: "ffmpeg".to_string(),
+                    backend_used: "cpu".to_string(),
+                    generation_time: 0.0,
+                });
+            }
+        }
+
+        serde_json::to_value(outputs)
+            .map(Json)
+            .map_err(|e| e.to_string())
+    }
+
+    #[tool(
+        name = "video_trim",
+        description = "Trim a video file to a specified start and end time range."
+    )]
+    pub async fn video_trim(
+        &self,
+        params: Parameters<VideoTrimRequest>,
+    ) -> Result<Json<serde_json::Value>, String> {
+        let req = params.0;
+        let input = std::path::Path::new(&req.video_path);
+        if !input.exists() || !input.is_file() {
+            return Err(format!("Input video file not found: {}", req.video_path));
+        }
+
+        let output_path = if let Some(out_p) = req.output_path {
+            std::path::PathBuf::from(out_p)
+        } else {
+            let filename = format!("trimmed_{}.mp4", uuid::Uuid::now_v7());
+            self.config.paths.output_dir.join(filename)
+        };
+
+        let _ = std::fs::create_dir_all(&self.config.paths.output_dir);
+        
+        let duration = req.end_time - req.start_time;
+        if duration <= 0.0 {
+            return Err("End time must be greater than start time".to_string());
+        }
+
+        let mut cmd = tokio::process::Command::new("ffmpeg");
+        cmd.args([
+            "-y",
+            "-ss", &req.start_time.to_string(),
+            "-to", &req.end_time.to_string(),
+            "-i", &req.video_path,
+            "-c:v", "libx264",
+            "-c:a", "aac",
+            &output_path.to_string_lossy(),
+        ]);
+
+        cmd.stdout(std::process::Stdio::null())
+           .stderr(std::process::Stdio::null());
+
+        let mut child = cmd.spawn().map_err(|e| e.to_string())?;
+        child.wait().await.map_err(|e| e.to_string())?;
+
+        let file_size = std::fs::metadata(&output_path).map(|m| m.len()).unwrap_or(0);
+        let spec = openmedia_core::VideoSpec {
+            path: output_path,
+            width: 0,
+            height: 0,
+            duration,
+            fps: 0,
+            codec: "h264".to_string(),
+            file_size,
+            generation_id: uuid::Uuid::now_v7().to_string(),
+            renderer_used: "ffmpeg".to_string(),
+            total_frames: 0,
+            generation_time: 0.0,
+        };
+
+        serde_json::to_value(spec)
+            .map(Json)
+            .map_err(|e| e.to_string())
     }
 }
 

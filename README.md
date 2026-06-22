@@ -17,7 +17,7 @@ The inspiration for OpenMedia-RS comes from:
 
 ---
 
-## ⚡ What We Have Done (v0.0.3 SVG Animation Engine Completion)
+## ⚡ What We Have Done (v0.0.5 Video Generation Engine Completion)
 * **Multi-Crate Workspace Architecture**: Created an 8-crate workspace spanning core engine, image, video, SVG, animate, process, quality improvement, and MCP server crates.
 * **Dyn Compatible Trait Architecture**: Annotated [DiffusionPipeline](crates/openmedia-image/src/lib.rs) and [FrameRenderer](crates/openmedia-video/src/lib.rs) with `#[async_trait]` to resolve compiler object safety blockers.
 * **JSON-RPC Stdio Loop**: Fully wired [OpenMediaServer](crates/openmedia-mcp/src/lib.rs) with the `rmcp` SDK macros (`#[tool_router(server_handler)]` and `#[tool]`), running completely over stdio transport.
@@ -30,8 +30,14 @@ The inspiration for OpenMedia-RS comes from:
   * **Path Morphing**: Parses, equalizes vertex counts using collapse logic, and interpolates between two path data strings.
   * **Sequencing Timeline**: Orchestrates sequential, parallel, and staggered animations by resolving absolute timings.
   * **Lottie Converter**: Imports Lottie JSON and translates shape layers/keyframes into animated SVGs.
-* **6 Animation MCP Tools Registered**: Added `animate_svg`, `animate_create_timeline`, `animate_morph_paths`, `animate_generate_spinner`, `animate_from_lottie`, and `animate_to_lottie` to the stdio MCP transport interface.
-* **Tested & Sandbox Verified**: Built robust unit and integration tests verifying MCP tool bindings, schema generation, image encoding, and animation calculations. Tests pass cleanly with `cargo test --workspace`.
+* **Video Scene Composition Engine (`openmedia-video`)**:
+  * **JSON-based Scene DSL**: Parses and validates multi-track visual element layers (Text, Image, Shape, SVG, Chart, Code, HTML) and layouts.
+  * **Unified Compositor**: Layer-composites elements with alpha opacity/premultiplication correction on the CPU or handles complex layouts via headless Chromium rendering.
+  * **Transitions Blender**: Implements frame-level crossfades, slides, and wipes between scene clips.
+  * **Piped Video Encoder**: Encodes raw frame streams using an optimized FFmpeg pipe over stdin, outputting H.264/AAC MP4 files.
+  * **Audio Track Mixer**: Dynamically mixes background narration and music tracks with configurable offsets, volumes, and fade timings.
+* **14 MCP Tools Registered**: Added 6 animation tools and 8 video tools (`video_create`, `video_preview`, `video_create_slideshow`, `video_add_transition`, `video_add_audio`, `video_from_template`, `video_extract_frames`, `video_trim`) to the stdio MCP transport interface.
+* **Tested & Sandbox Verified**: Built robust unit and integration tests verifying MCP tool bindings, schema generation, image encoding, video compilation, transitions, and audio mixing. Tests pass cleanly with `cargo test --workspace`.
 
 ---
 
@@ -48,9 +54,14 @@ OpenMedia-RS exposes the following Model Context Protocol (MCP) tools directly t
 
 ### 2. Video Composition (`openmedia-video`)
 * **`html_to_image`** (Active 🟢): Renders HTML/CSS layout templates or files to PNG, JPEG, or WebP screenshots.
-* **`create_video`**: Renders frame-by-frame scenes defined using a JSON Scene DSL (HTML/CSS layout) and compiles them into H.264/VP9/AV1 videos using native FFmpeg pipeline hooks.
-* **`create_slideshow`**: Compiles an image sequence with transitions (crossfade, slide, zoom, Ken Burns) and mixes background audio.
-* **`add_audio_to_video`**: Fuses audio tracks into existing video containers.
+* **`video_create`** (Active 🟢): Renders frame-by-frame scenes defined using a JSON Scene DSL (HTML/CSS layout or SVG) and compiles them into H.264 videos using native FFmpeg pipeline hooks.
+* **`video_preview`** (Active 🟢): Renders a preview frame at a specific timestamp.
+* **`video_create_slideshow`** (Active 🟢): Compiles an image sequence with transitions (crossfade, slide, wipe) and mixes background audio.
+* **`video_add_transition`** (Active 🟢): Adds scene transitions inside the DSL description.
+* **`video_add_audio`** (Active 🟢): Fuses audio tracks into existing video containers or JSON descriptions.
+* **`video_from_template`** (Active 🟢): Instantiates videos from prebuilt templates.
+* **`video_extract_frames`** (Active 🟢): Extracts keyframe images from a video at specific time offsets.
+* **`video_trim`** (Active 🟢): Trims a video file to a specific time range.
 
 ### 3. SVG Vector & Diagram Generation (`openmedia-svg`)
 * **`rasterize_svg`** (Active 🟢): Converts SVG vector strings or files directly to PNG, JPEG, or WebP images.

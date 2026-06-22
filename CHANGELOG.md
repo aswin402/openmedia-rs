@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v0.0.5] - 2026-06-23
+
+### Added
+- **Video Scene Composition Engine (`openmedia-video`)**: Implemented a JSON-based Video Scene DSL parser and compiler. Built CPU SVG rasterizing frame rendering with `tiny-skia`/`resvg`, and headless browser rendering via `chromiumoxide`. Implemented pixel-level frame transitions (Crossfade, Slide Left/Right/Up/Down, Wipe Left/Right) for SVG frames and CSS transitions for HTML pages. Wired up a silent H.264 video encoder utilizing FFmpeg piped MJPEG stdin stream, and a multi-track audio mixer/muxer (with delay and volume blending scripts).
+- **MCP Video Tools**: Registered 8 new video tools on the JSON-RPC interface: `video_create`, `video_preview`, `video_create_slideshow`, `video_add_transition`, `video_add_audio`, `video_from_template`, `video_extract_frames`, `video_trim`.
+- **Integrated Verification Suites**: Added comprehensive integration tests in `mcp_video_tests.rs` covering scene composition, preview frame extraction, slideshow generation, template rendering, frame extraction, video trimming, transitions, and audio track additions.
+
+### Fixed
+- Fixed color type conversion from RGBA8 to RGB8 before encoding to JPEG (since JPEG doesn't support transparency) to resolve FFmpeg MJPEG encoding failures.
+- Corrected `chromiumoxide` Page viewport resizing using raw CDP Emulation commands (`SetDeviceMetricsOverrideParams`).
+- Resolved `chromiumoxide` Browser close ownership borrowing issues by removing `Arc` wrapper and using `mut self` ownership.
+- Eliminated all unused imports and mutability clippy warnings in `openmedia-mcp` and `openmedia-video` crates to ensure a clean, warning-free build.
+
 ## [v0.0.4] - 2026-06-23
 
 ### Added
