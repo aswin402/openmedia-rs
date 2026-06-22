@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v0.0.4] - 2026-06-23
+
+### Added
+- **GPU Compute Processing Core (`openmedia-process`)**: Configured a `wgpu` v23.0 context pipeline utilizing WGSL compute shaders with 16-byte uniform alignment. Added a little-endian pixel buffer upload/download framework, and implemented the `invert.wgsl` compute shader to perform GPU-accelerated image inversion.
+- **CPU Image Processing Fallback (`openmedia-process`)**: Implemented multi-threaded CPU parallel filters using `rayon` and `imageproc` covering grayscale, invert, brightness, contrast, saturation, hue rotation, sepia, threshold, box blur (utilizing RGBA channel splitting), and composite filters.
+- **Geometric Transforms & Formats support**: Added aspect-ratio-aware resizing (Nearest, Bilinear, Lanczos3), cropping, rotations, and flips. Mapped encoders for PNG, JPEG, WebP, and AVIF outputs with custom quality configurations.
+- **Sequential Filter Chains & Concurrent Batch Processor**: Implemented the `FilterChain` pipeline to execute sequential operations with GPU priority and CPU fallback. Added `batch_process_files` to concurrently process images matched by glob pattern using tokio threads.
+- **MCP Image Processing Tools**: Exposed 6 new tools over the JSON-RPC interface: `image_apply_filter`, `image_resize`, `image_crop`, `image_transform`, `image_convert`, and `image_batch_process`.
+- **Integrated Verification Suites**: Added CPU tests, GPU tests, transform tests, batch tests, and end-to-end server integration tests verifying correct image outputs.
+
+### Fixed
+- Fixed all compiler and clippy warnings workspace-wide, including unused imports, redundant closures, manual div_ceil division implementations, and unnecessary mutability assertions.
+
 ## [v0.0.3] - 2026-06-22
 
 ### Added
