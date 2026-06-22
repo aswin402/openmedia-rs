@@ -103,3 +103,6 @@ impl DummyGpuPipeline {
         false
     }
 }
+
+pub mod cpu;
+pub use cpu::apply_cpu_operation;

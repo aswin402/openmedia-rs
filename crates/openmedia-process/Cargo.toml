@@ -17,3 +17,7 @@ rayon = { version = "1.10" }
 wgpu = { version = "23.0" }
 bytemuck = { version = "1.19" }
 imageproc = { version = "0.25" }
+glob = "0.3"
+
+[dev-dependencies]
+tempfile = "3.10"
