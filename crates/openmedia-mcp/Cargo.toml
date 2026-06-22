@@ -14,6 +14,7 @@ openmedia-animate = { workspace = true }
 openmedia-process = { workspace = true }
 openmedia-improve = { workspace = true }
 uuid = { workspace = true }
+image = { workspace = true }
 
 tokio = { workspace = true }
 serde = { workspace = true }
@@ -25,3 +26,6 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 # MCP SDK
 rmcp = { version = "1.7.0", features = ["server", "transport-io", "macros"] }
+
+[dev-dependencies]
+tempfile = "3.10"

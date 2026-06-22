@@ -92,6 +92,7 @@ impl BlendMode {
     }
 }
 
+#[derive(Default)]
 pub struct DummyGpuPipeline;
 
 impl DummyGpuPipeline {
@@ -116,7 +117,7 @@ pub use transforms::{resize_image, crop_image};
 pub mod io;
 pub use io::write_image_with_format;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct FilterChain {
     pub operations: Vec<ProcessOperation>,
 }

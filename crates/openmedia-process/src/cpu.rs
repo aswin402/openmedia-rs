@@ -150,8 +150,8 @@ pub fn apply_cpu_operation(img: &DynamicImage, op: &ProcessOperation) -> Result<
             Ok(img.resize_exact(*width, *height, filter))
         }
         ProcessOperation::Crop { x, y, width, height } => {
-            let mut rgba = img.to_rgba8();
-            let cropped = image::imageops::crop_imm(&mut rgba, *x, *y, *width, *height).to_image();
+            let rgba = img.to_rgba8();
+            let cropped = image::imageops::crop_imm(&rgba, *x, *y, *width, *height).to_image();
             Ok(DynamicImage::ImageRgba8(cropped))
         }
         ProcessOperation::Rotate { angle, .. } => {

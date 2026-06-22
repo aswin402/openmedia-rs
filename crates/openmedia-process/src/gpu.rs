@@ -110,7 +110,7 @@ async fn apply_gpu_operation_async(img: &DynamicImage, op: &ProcessOperation) ->
                 let mut compute_pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor { label: None, timestamp_writes: None });
                 compute_pass.set_pipeline(&pipeline);
                 compute_pass.set_bind_group(0, &bind_group, &[]);
-                compute_pass.dispatch_workgroups((width + 15) / 16, (height + 15) / 16, 1);
+                compute_pass.dispatch_workgroups(width.div_ceil(16), height.div_ceil(16), 1);
             }
 
             let size = (raw_pixels.len() * 4) as u64;

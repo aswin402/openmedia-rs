@@ -3134,6 +3134,7 @@ dependencies = [
 name = "openmedia-mcp"
 version = "0.1.0"
 dependencies = [
+ "image",
  "openmedia-animate",
  "openmedia-core",
  "openmedia-image",
@@ -3145,6 +3146,7 @@ dependencies = [
  "schemars",
  "serde",
  "serde_json",
+ "tempfile",
  "thiserror 2.0.18",
  "tokio",
  "tracing",
