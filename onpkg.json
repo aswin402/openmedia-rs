@@ -1,0 +1,36 @@
+{
+  "agent_instructions": {
+    "active_skills": [],
+    "docs_directory": "onpkg_docs/"
+  },
+  "architecture": {},
+  "packages": {
+    "added_by_agent": [],
+    "core": []
+  },
+  "project": {
+    "name": "openmedia-rs",
+    "package_manager": "cargo",
+    "runtime": "rust",
+    "stack": "custom"
+  },
+  "scripts": {
+    "build": "cargo build",
+    "test": "cargo test",
+    "run": "cargo run --package openmedia-mcp"
+  },
+  "sources": {
+    "directories": [
+      "docs"
+    ],
+    "file_patterns": [
+      "*.md"
+    ],
+    "files": [
+      "docs/CORE.md",
+      "docs/IMPLEMENTATION_PLAN.md",
+      "docs/SPEC.md",
+      "docs/TODO.md"
+    ]
+  }
+}

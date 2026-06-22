@@ -1,0 +1,25 @@
+[package]
+name = "openmedia-mcp"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+openmedia-core = { workspace = true }
+openmedia-image = { workspace = true }
+openmedia-video = { workspace = true }
+openmedia-svg = { workspace = true }
+openmedia-animate = { workspace = true }
+openmedia-process = { workspace = true }
+openmedia-improve = { workspace = true }
+
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# MCP SDK
+rmcp = { version = "1.7.0", features = ["server", "transport-io", "macros"] }

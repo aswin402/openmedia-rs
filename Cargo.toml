@@ -1,0 +1,38 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/openmedia-core",
+    "crates/openmedia-image",
+    "crates/openmedia-video",
+    "crates/openmedia-svg",
+    "crates/openmedia-animate",
+    "crates/openmedia-process",
+    "crates/openmedia-improve",
+    "crates/openmedia-mcp",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+rust-version = "1.82"
+
+[workspace.dependencies]
+# Internal crates
+openmedia-core = { path = "crates/openmedia-core" }
+openmedia-image = { path = "crates/openmedia-image" }
+openmedia-video = { path = "crates/openmedia-video" }
+openmedia-svg = { path = "crates/openmedia-svg" }
+openmedia-animate = { path = "crates/openmedia-animate" }
+openmedia-process = { path = "crates/openmedia-process" }
+openmedia-improve = { path = "crates/openmedia-improve" }
+
+# Shared dependencies
+tokio = { version = "1.42", features = ["full"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+thiserror = "2.0"
+tracing = "0.1"
+image = "0.25"
+uuid = { version = "1.11", features = ["v7"] }
+async-trait = "0.1.80"
