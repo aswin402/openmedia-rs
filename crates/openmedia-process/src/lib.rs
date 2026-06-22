@@ -115,3 +115,81 @@ pub use transforms::{resize_image, crop_image};
 
 pub mod io;
 pub use io::write_image_with_format;
+
+#[derive(Debug, Clone)]
+pub struct FilterChain {
+    pub operations: Vec<ProcessOperation>,
+}
+
+impl FilterChain {
+    pub fn new() -> Self {
+        Self { operations: Vec::new() }
+    }
+
+    pub fn add(&mut self, op: ProcessOperation) {
+        self.operations.push(op);
+    }
+
+    pub fn apply(&self, img: &image::DynamicImage) -> openmedia_core::Result<image::DynamicImage> {
+        let mut current_img = img.clone();
+        for op in &self.operations {
+            // Prefer GPU, fallback to CPU
+            current_img = if let Ok(gpu_img) = crate::gpu::apply_gpu_operation(&current_img, op) {
+                gpu_img
+            } else {
+                crate::cpu::apply_cpu_operation(&current_img, op)?
+            };
+        }
+        Ok(current_img)
+    }
+}
+
+pub async fn batch_process_files(
+    glob_pattern: &str,
+    chain: &FilterChain,
+    output_dir: &std::path::Path,
+) -> openmedia_core::Result<Vec<std::path::PathBuf>> {
+    let paths_iter = glob::glob(glob_pattern)
+        .map_err(|e| openmedia_core::OpenMediaError::IoError(std::io::Error::new(std::io::ErrorKind::InvalidInput, e.to_string())))?;
+        
+    let paths: Vec<std::path::PathBuf> = paths_iter
+        .filter_map(Result::ok)
+        .filter(|p| p.is_file())
+        .collect();
+
+    let _ = std::fs::create_dir_all(output_dir);
+
+    let chain = std::sync::Arc::new(chain.clone());
+    let output_dir = output_dir.to_path_buf();
+
+    let mut tasks = Vec::new();
+    for path in paths {
+        let chain = std::sync::Arc::clone(&chain);
+        let output_dir = output_dir.clone();
+        tasks.push(tokio::task::spawn_blocking(move || -> openmedia_core::Result<std::path::PathBuf> {
+            let img = image::open(&path)
+                .map_err(|e| openmedia_core::OpenMediaError::IoError(std::io::Error::new(std::io::ErrorKind::NotFound, e.to_string())))?;
+            let processed = chain.apply(&img)?;
+            
+            let filename = path.file_name().ok_or_else(|| {
+                openmedia_core::OpenMediaError::IoError(std::io::Error::new(std::io::ErrorKind::InvalidInput, "Invalid filename"))
+            })?;
+            let dest = output_dir.join(filename);
+            processed.save(&dest)
+                .map_err(|e| openmedia_core::OpenMediaError::ImageEncodeError {
+                    format: dest.extension().and_then(|ext| ext.to_str()).unwrap_or("unknown").to_string(),
+                    reason: e.to_string(),
+                })?;
+            Ok(dest)
+        }));
+    }
+
+    let mut output_paths = Vec::new();
+    for task in tasks {
+        let path = task.await
+            .map_err(|e| openmedia_core::OpenMediaError::Internal(e.to_string()))??;
+        output_paths.push(path);
+    }
+
+    Ok(output_paths)
+}
