@@ -17,7 +17,9 @@ The inspiration for OpenMedia-RS comes from:
 
 ---
 
-## ⚡ What We Have Done (v0.0.7 Polish & Release Completion)
+## ⚡ What We Have Done (v0.0.8 Mermaid Engine Integration)
+* **Mermaid Diagram Engine (`openmedia-svg`)**: Integrated native Mermaid diagram compilation using `mermaid-rs-renderer`, enabling offline flowchart, sequence diagram, and architecture graph generation natively in Rust without browser or network dependencies.
+* **Mermaid MCP Tool (`diagram_generate_mermaid`)**: Registered the `diagram_generate_mermaid` tool to compile Mermaid string definitions, saving them to the output directory as SVG, PNG, JPEG, or WebP.
 * **Model Auto-Download Experience (`openmedia-core`)**: Integrated registry streams to download CLIP text, CLIP vision, and LAION Aesthetic predictor models directly from the Hugging Face Hub, utilizing `reqwest` chunk-by-chunk streams.
 * **Telemetry Progress Isolation**: Configured a thread-safe `StderrProgressReporter` to emit per-byte streaming progress metrics directly to `stderr`, preserving the integrity of standard output (`stdout`) for clean MCP JSON-RPC stdio transport communication.
 * **Production Dockerization**: Set up a multi-stage production `Dockerfile` creating a lightweight Debian-slim container pre-configured with headless Chrome and FFmpeg runtime requirements.
@@ -47,8 +49,9 @@ The inspiration for OpenMedia-RS comes from:
   * **Generation History Database**: Logs all tool outputs, request inputs, aesthetic scores, and generation parameters to a version-controlled SQLite database schema.
   * **Prompt Refiner**: Applies quality-boosting modifier tokens and default defect-reducing negative prompts based on quality score feedback.
   * **Iterative Refinement Loop**: Runs auto-refine feedback chains (generate → score → refine → rebuild) using fallback vector rendering.
-* **20 MCP Tools Registered**: Integrated 6 animation tools, 8 video tools, 5 quality self-improvement tools (`improve_score_image`, `improve_refine_prompt`, `improve_auto_refine`, `improve_feedback`, `improve_quality_report`), and the model management tool into the JSON-RPC Stdio router transport.
+* **21 MCP Tools Registered**: Integrated 6 animation tools, 8 video tools, 5 quality self-improvement tools (`improve_score_image`, `improve_refine_prompt`, `improve_auto_refine`, `improve_feedback`, `improve_quality_report`), model download, and Mermaid diagram generation into the JSON-RPC Stdio router transport.
 * **Tested & Sandbox Verified**: Built robust unit and integration tests verifying MCP tool bindings, schema generation, image encoding, video compilation, transitions, audio mixing, history database inserts, prompt refinement, and registry model downloads. Tests pass cleanly with `cargo test --workspace`.
+* **Mermaid Integration Verification**: Verification suite includes native Mermaid parser output tests and rasterized diagram image format tests.
 
 ---
 
@@ -76,6 +79,7 @@ OpenMedia-RS exposes the following Model Context Protocol (MCP) tools directly t
 
 ### 3. SVG Vector & Diagram Generation (`openmedia-svg`)
 * **`rasterize_svg`** (Active 🟢): Converts SVG vector strings or files directly to PNG, JPEG, or WebP images.
+* **`diagram_generate_mermaid`** (Active 🟢): Compiles flowcharts, sequence diagrams, and architecture graphs from Mermaid markdown text into SVG, PNG, JPEG, or WebP.
 * **`create_svg`**: Fluent path, primitive, gradient, text, and filter definition to build raw optimized SVGs.
 * **`create_chart`**: Generates bar, line, pie, scatter, radar, and gauge charts from raw JSON data.
 * **`create_diagram`**: Renders auto-laid-out Flowcharts, UML sequence, architecture, and ER diagrams.

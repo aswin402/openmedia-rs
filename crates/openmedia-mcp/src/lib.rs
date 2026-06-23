@@ -558,6 +558,22 @@ pub struct ModelDownloadRequest {
     pub id: String,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct GenerateMermaidRequest {
+    /// Raw Mermaid diagram markdown or text
+    pub code: String,
+    /// Theme for the diagram (e.g. default, dark, forest, neutral)
+    pub theme: Option<String>,
+    /// Target width for rasterized output formats
+    pub width: Option<u32>,
+    /// Target height for rasterized output formats
+    pub height: Option<u32>,
+    /// Optional background color hex (e.g. #ffffff). Default is transparent.
+    pub background_color: Option<String>,
+    /// Output format (svg, png, jpeg, webp). Default is svg.
+    pub output_format: Option<String>,
+}
+
 #[tool_router(server_handler)]
 impl OpenMediaServer {
     #[tool(description = "Ping the media generation server to check status and health")]
@@ -628,6 +644,68 @@ impl OpenMediaServer {
             &output_path,
         ).map_err(|e| e.to_string())?;
 
+        serde_json::to_value(output)
+            .map(Json)
+            .map_err(|e| e.to_string())
+    }
+
+    #[tool(
+        name = "diagram_generate_mermaid",
+        description = "Generate a flowchart, sequence diagram, or architecture diagram from a Mermaid string and save it to the output directory as SVG, PNG, JPEG, or WebP."
+    )]
+    pub async fn diagram_generate_mermaid(
+        &self,
+        params: Parameters<GenerateMermaidRequest>,
+    ) -> Result<Json<serde_json::Value>, String> {
+        let req = params.0;
+        let format = req.output_format.clone().unwrap_or_else(|| "svg".to_string());
+        let clean_format = format.trim().to_lowercase();
+        
+        let _ = std::fs::create_dir_all(&self.config.paths.output_dir);
+        
+        let svg_content = openmedia_svg::render_mermaid(&req.code)
+            .map_err(|e| format!("Failed to render Mermaid diagram: {}", e))?;
+            
+        let start_time = std::time::Instant::now();
+        let filename = format!("{}.{}", uuid::Uuid::now_v7(), clean_format);
+        let output_path = self.config.paths.output_dir.join(filename);
+        
+        let output = if clean_format == "svg" {
+            std::fs::write(&output_path, &svg_content)
+                .map_err(|e| format!("Failed to write SVG output: {}", e))?;
+                
+            let file_size = std::fs::metadata(&output_path)
+                .map(|m| m.len())
+                .unwrap_or(svg_content.len() as u64);
+                
+            let (w, h) = parse_svg_dimensions(&svg_content);
+            let generation_time = start_time.elapsed().as_secs_f64();
+            
+            openmedia_core::ImageOutput {
+                path: output_path,
+                width: w,
+                height: h,
+                seed: 0,
+                format: clean_format,
+                file_size,
+                generation_id: uuid::Uuid::now_v7().to_string(),
+                clip_score: None,
+                aesthetic_score: None,
+                model_used: "mermaid-rs-renderer".to_string(),
+                backend_used: "mermaid-rs-renderer".to_string(),
+                generation_time,
+            }
+        } else {
+            openmedia_svg::rasterize(
+                &svg_content,
+                req.width,
+                req.height,
+                req.background_color.as_deref(),
+                &clean_format,
+                &output_path,
+            ).map_err(|e| format!("Failed to rasterize Mermaid SVG: {}", e))?
+        };
+        
         serde_json::to_value(output)
             .map(Json)
             .map_err(|e| e.to_string())
@@ -2372,6 +2450,59 @@ mod tests {
         assert_eq!(output.height, 200);
         assert!(output.path.exists());
         let _ = std::fs::remove_file(output.path);
+    }
+
+    #[tokio::test]
+    async fn test_mcp_diagram_generate_mermaid() {
+        let mut config = Config::default();
+        let temp_dir = std::env::temp_dir();
+        config.paths.model_dir = temp_dir.join("openmedia_test_models_mermaid");
+        config.paths.output_dir = temp_dir.join("openmedia_test_output_mermaid");
+        config.paths.history_db = temp_dir.join("openmedia_test_history_mermaid.db");
+
+        let _ = std::fs::create_dir_all(&config.paths.output_dir);
+        let server = OpenMediaServer::new(config).await.unwrap();
+
+        let code = "flowchart LR\n  A --> B".to_string();
+
+        // 1. Test SVG output (default)
+        let params = Parameters(GenerateMermaidRequest {
+            code: code.clone(),
+            theme: None,
+            width: None,
+            height: None,
+            background_color: None,
+            output_format: Some("svg".to_string()),
+        });
+
+        let result = server.diagram_generate_mermaid(params).await;
+        assert!(result.is_ok());
+        let val = result.unwrap().0;
+        let output: openmedia_core::ImageOutput = serde_json::from_value(val).unwrap();
+        assert_eq!(output.format, "svg");
+        assert!(output.path.exists());
+        let svg_content = std::fs::read_to_string(&output.path).unwrap();
+        assert!(svg_content.contains("<svg") || svg_content.contains("svg"));
+        let _ = std::fs::remove_file(&output.path);
+
+        // 2. Test PNG output (rasterized)
+        let params_png = Parameters(GenerateMermaidRequest {
+            code,
+            theme: None,
+            width: Some(400),
+            height: None,
+            background_color: Some("#ffffff".to_string()),
+            output_format: Some("png".to_string()),
+        });
+
+        let result_png = server.diagram_generate_mermaid(params_png).await;
+        assert!(result_png.is_ok());
+        let val_png = result_png.unwrap().0;
+        let output_png: openmedia_core::ImageOutput = serde_json::from_value(val_png).unwrap();
+        assert_eq!(output_png.format, "png");
+        assert_eq!(output_png.width, 400);
+        assert!(output_png.path.exists());
+        let _ = std::fs::remove_file(&output_png.path);
     }
 
     #[tokio::test]

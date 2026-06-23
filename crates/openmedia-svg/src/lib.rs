@@ -762,9 +762,24 @@ pub fn rasterize(
     })
 }
 
+/// Render a Mermaid diagram into SVG XML content natively
+pub fn render_mermaid(code: &str) -> std::result::Result<String, String> {
+    mermaid_rs_renderer::render(code)
+        .map_err(|e| format!("Failed to render Mermaid diagram: {:?}", e))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_render_mermaid() {
+        let code = "flowchart LR\n  A --> B";
+        let result = render_mermaid(code);
+        assert!(result.is_ok());
+        let svg = result.unwrap();
+        assert!(svg.contains("<svg") || svg.contains("svg"));
+    }
 
     #[test]
     fn test_svg_builder() {

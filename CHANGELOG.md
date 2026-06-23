@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v0.0.8] - 2026-06-23
+
+### Added
+- **Mermaid Diagram Engine**: Integrated native Mermaid parser and renderer (`mermaid-rs-renderer`) into `openmedia-svg` to compile Mermaid text blocks to SVGs natively offline in Rust.
+- **Mermaid Generation MCP Tool**: Registered the `diagram_generate_mermaid` JSON-RPC tool on the MCP server to render Mermaid diagrams to SVG, PNG, JPEG, or WebP.
+- **Integrated Verification Suites**: Added comprehensive tests verifying native Mermaid rendering and image rasterization.
+
 ## [v0.0.7] - 2026-06-23
 
 ### Added
