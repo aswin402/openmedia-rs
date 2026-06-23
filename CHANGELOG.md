@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Multi-Stage Dockerfile**: Set up a production-ready, multi-stage `Dockerfile` creating a lightweight Debian-slim container pre-configured with Chrome headless and FFmpeg requirements.
 - **GitHub Actions Release Workflow**: Created `.github/workflows/release.yml` automatically building and packaging binaries for Linux (x86_64), macOS (x86_64, aarch64), and Windows (x86_64) on tag pushes.
 - **Release Profile Optimizations**: Configured optimized release profile (`opt-level = 3`, Link-Time Optimization `lto = true`, `codegen-units = 1`, `panic = "abort"`, and `strip = true`) to minimize binaries size and speed up execution.
+- **Documentation Updates**: Updated `README.md` system requirements and comparison tables to reflect the actual, highly-optimized footprint and scope of OpenMedia-RS.
 
 ### Fixed
 - Replaced `native-tls` default feature flags in `reqwest` dependency with static `rustls-tls` backend to resolve system-level OpenSSL compilation and linkage issues.

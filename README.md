@@ -106,11 +106,11 @@ OpenMedia-RS exposes the following Model Context Protocol (MCP) tools directly t
 
 | Component | Minimum | Recommended |
 | :--- | :--- | :--- |
-| **Processor** | 4-Core CPU (with AVX2 support) | 8+ Core CPU (AVX-512 preferred) |
-| **RAM** | 8 GB Total | 16 GB Total |
-| **ROM (Storage)** | 10 GB (for binary & quantized models) | 50 GB (for multiple model variants) |
+| **Processor** | Dual-Core CPU (with AVX2 or ARM NEON support) | 4+ Core CPU (AVX-512 preferred) |
+| **RAM** | 4 GB Total (fits under 1 GB for CLIP/Aesthetic scoring) | 8 GB+ Total |
+| **ROM (Storage)** | < 1 GB (for optimized binary & base CLIP/Aesthetic models) | 10 GB+ (if downloading large diffusion models) |
 | **Runtime** | Rust 1.82+ (Zero Python/Node.js required) | Rust 1.82+ |
-| **Optional Extras**| FFmpeg (for video containers), Chromium | FFmpeg, Vulkan SDK / CUDA Toolkit |
+| **Optional Extras**| FFmpeg (for video encoding/muxing), Chromium | FFmpeg, Vulkan SDK / CUDA Toolkit / Metal |
 
 ---
 
@@ -118,11 +118,11 @@ OpenMedia-RS exposes the following Model Context Protocol (MCP) tools directly t
 
 | Dimension | OpenMedia-RS | Python Diffusers Suite | Remotion (Node.js) |
 | :--- | :--- | :--- | :--- |
-| **Runtime Size** | ~100MB (Single binary) | Multi-gigabyte (pip/conda virtualenv) | Node modules + web browser package |
-| **Inference Path** | Quantized GGUF / ONNX (wgpu & ORT) | PyTorch / Python Interpreter | N/A (Video rendering only) |
-| **Hardware Fit** | Low-spec friendly (fits in 2-4GB RAM) | High-spec required (12GB+ VRAM typical)| CPU-bound rendering |
-| **MCP Integration**| Built-in (native JSON-RPC over stdio) | Requires custom Python wrap scripts | Requires custom Node wrapper |
-| **Scope** | Images + Video + SVG + Self-Improvement | Image Generation Only | Video Composition Only |
+| **Runtime Size** | **~60MB** (Stripped release binary) | 5GB+ (PyTorch, virtualenv, CUDA libraries) | 500MB+ (Node modules + package) |
+| **Inference Path** | ONNX Runtime (`ort` for CLIP) & `wgpu` (compute) | PyTorch / Python Interpreter | N/A (Video rendering only) |
+| **Hardware Fit** | **Ultra-low-spec friendly** (Runs on CPU with SIMD fallback or GPU; <1GB memory footprint) | High-spec required (8GB+ VRAM typical) | Moderate (CPU-bound rendering) |
+| **MCP Integration**| **Native** (Built-in JSON-RPC stdio, 20+ tools) | Requires custom Python wrap scripts | Requires custom Node wrapper |
+| **Scope** | Layout-to-Image + SVG Animation + Video Scene DSL + GPU Image Filters + Telemetry Scoring | AI Image Generation Only | Programmatic Video Composition Only |
 
 ---
 
