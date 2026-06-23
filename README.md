@@ -17,7 +17,9 @@ The inspiration for OpenMedia-RS comes from:
 
 ---
 
-## ⚡ What We Have Done (v0.0.9 SVG Canvas, Chart, and Icon Engine)
+## ⚡ What We Have Done (v0.0.10 Custom Mermaid Styling & Theme Overrides)
+* **Custom Mermaid Styling & Theme Overrides (`diagram_generate_mermaid`)**: Extended the Mermaid diagram generator to support theme presets (`default`, `dark`, `forest`, `neutral`), custom layout spacing configurations, and custom JSON field styling overrides.
+* **Refined Lightweight Architecture**: Re-scoped the project to focus on a strictly lightweight vector rendering, diagram compilation, and layout animation engine (< 50MB RAM/ROM footprint). Bypassed heavy local AI diffusion models in favor of online LLM/multimodal agents acting as the visual code designers.
 * **JSON-to-SVG Canvas Engine (`openmedia-svg`)**: Implemented deserialization schema rules for structured canvas shapes (Rects, Circles, Texts) to compile JSON arrays into standard SVG vector markup natively.
 * **Custom Chart Engine (`create_chart`)**: Built vertical bars charting, smooth bezier curve plotting, and polar coordinates pie slice drawing (using arc paths) with configurable legend keys and titles.
 * **Embedded Vector Icon Library (`create_icon`)**: Bundled 20 popular Feather/Lucide vector paths (e.g. home, user, settings, play, check) to scale and style on demand.

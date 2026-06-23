@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v0.0.10] - 2026-06-23
+
+### Added
+- **Refined Lightweight Architecture**: Re-scoped the project to focus on a strictly lightweight vector rendering, diagram compilation, and layout animation engine (< 50MB RAM/ROM footprint). Bypassed heavy local AI diffusion models in favor of online LLM/multimodal agents acting as the visual code designers.
+- **Custom Mermaid Styling & Theme Overrides**: Extended `diagram_generate_mermaid` tool and the underlying `render_mermaid` engine to support theme presets (`default`, `dark`, `forest`, `neutral`), custom layout spacing adjustments, and partial field overrides via JSON.
+- **System Resource Guidelines**: Documented exact CPU, RAM, and ROM constraints for each media module to ensure optimal local performance.
+
 ## [v0.0.9] - 2026-06-23
 
 ### Added
