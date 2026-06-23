@@ -2,6 +2,9 @@ use serde::{Deserialize, Serialize};
 use openmedia_core::{Result, SvgOutput, ImageOutput, OpenMediaError};
 use std::collections::HashMap;
 
+pub mod schema;
+
+
 #[derive(Debug, Clone)]
 pub struct SvgBuilder {
     pub width: u32,
@@ -608,6 +611,44 @@ pub enum DiagramType {
 pub fn generate_chart(config: &ChartConfig) -> Result<String> {
     Ok(format!("<svg width=\"{}\" height=\"{}\"><text y=\"20\">Chart: {:?}</text></svg>", config.width, config.height, config.chart_type))
 }
+
+/// Build SVG XML string from JSON elements
+pub fn build_svg_from_json(width: u32, height: u32, elements: &serde_json::Value) -> Result<String> {
+    let json_elements: Vec<schema::JsonElement> = serde_json::from_value(elements.clone())
+        .map_err(|e| OpenMediaError::InvalidParameter {
+            param: "elements".to_string(),
+            reason: e.to_string(),
+        })?;
+
+    let mut builder = SvgBuilder::new(width, height);
+    for elem in json_elements {
+        match elem {
+            schema::JsonElement::Rect { x, y, width, height, rx, ry, fill, stroke } => {
+                let mut rect = builder.rect(x, y, width, height);
+                if let Some(f) = fill { rect = rect.fill(&f); }
+                if let Some(s) = stroke { rect = rect.stroke(&s); }
+                if let Some(rx_val) = rx { rect = rect.rx(rx_val); }
+                if let Some(ry_val) = ry { rect = rect.ry(ry_val); }
+                rect.finish();
+            }
+            schema::JsonElement::Circle { cx, cy, r, fill, stroke } => {
+                let mut circle = builder.circle(cx, cy, r);
+                if let Some(f) = fill { circle = circle.fill(&f); }
+                if let Some(s) = stroke { circle = circle.stroke(&s); }
+                circle.finish();
+            }
+            schema::JsonElement::Text { x, y, content, fill, font_size, font_family } => {
+                let mut text = builder.text(x, y, &content);
+                if let Some(f) = fill { text = text.fill(&f); }
+                if let Some(sz) = font_size { text = text.font_size(sz); }
+                if let Some(fam) = font_family { text = text.font_family(&fam); }
+                text.finish();
+            }
+        }
+    }
+    Ok(builder.build())
+}
+
 
 
 /// Rasterize an SVG string into an ImageOutput with specified dimensions and background color.
