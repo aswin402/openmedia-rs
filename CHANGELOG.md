@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v0.0.7] - 2026-06-23
+
+### Added
+- **Model Auto-Download Experience**: Integrated automatic model downloader inside the model registry (`openmedia-core`), streaming CLIP text, CLIP vision, and LAION Aesthetic predictor models directly from the Hugging Face Hub via `reqwest` chunk-by-chunk streams.
+- **Model Download MCP Tool**: Registered `model_download` JSON-RPC tool on the MCP server (`openmedia-mcp`) allowing agents to request downloads dynamically with an input validation schema.
+- **Stderr Progress Reporting**: Built a dedicated thread-safe `StderrProgressReporter` to emit per-byte streaming download progress metrics directly to `stderr` without corrupting standard output streams used for MCP stdio communications.
+- **Multi-Stage Dockerfile**: Set up a production-ready, multi-stage `Dockerfile` creating a lightweight Debian-slim container pre-configured with Chrome headless and FFmpeg requirements.
+- **GitHub Actions Release Workflow**: Created `.github/workflows/release.yml` automatically building and packaging binaries for Linux (x86_64), macOS (x86_64, aarch64), and Windows (x86_64) on tag pushes.
+- **Release Profile Optimizations**: Configured optimized release profile (`opt-level = 3`, Link-Time Optimization `lto = true`, `codegen-units = 1`, `panic = "abort"`, and `strip = true`) to minimize binaries size and speed up execution.
+
+### Fixed
+- Replaced `native-tls` default feature flags in `reqwest` dependency with static `rustls-tls` backend to resolve system-level OpenSSL compilation and linkage issues.
+- Fixed unused import compiler warnings in the model registry crate.
+- Fixed a test assertion in the `model_download` suite to align with display formatting of model registry errors.
+
 ## [v0.0.6] - 2026-06-23
 
 ### Added

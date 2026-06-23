@@ -18,7 +18,7 @@
 - [ ] 🔴 **P0** | Create `crates/openmedia-improve/` crate — quality scoring and self-improvement
 - [ ] 🔴 **P0** | Create `crates/openmedia-mcp/` crate — MCP server binary
 - [ ] 🔴 **P0** | Create `.github/workflows/ci.yml` — lint, test, build on PR and push
-- [ ] 🔴 **P0** | Create `.github/workflows/release.yml` — cross-compile binaries on version tags
+- [x] 🔴 **P0** | Create `.github/workflows/release.yml` — cross-compile binaries on version tags
 - [ ] 🔴 **P0** | Create `.gitignore` — target/, models/, *.png, *.mp4, IDE configs, .env
 - [ ] 🟡 **P1** | Add `LICENSE` file — MIT or Apache-2.0 or dual license
 - [ ] 🟡 **P1** | Create `README.md` — project overview, features, installation, usage
@@ -69,10 +69,10 @@
 - [ ] 🔴 **P0** | Define `ModelFormat` enum — SafeTensors, Gguf, Onnx
 - [ ] 🔴 **P0** | Define `ModelStatus` enum — NotDownloaded, Downloading, Ready, Corrupted, Loaded
 - [ ] 🔴 **P0** | Define `ModelRegistry` trait — list, get, download, verify, delete
-- [ ] 🔴 **P0** | Implement `HuggingFaceRegistry` — download from HF Hub with auth token support
-- [ ] 🔴 **P0** | Implement streaming download with progress reporting — per-byte progress callbacks
+- [x] 🔴 **P0** | Implement `HuggingFaceRegistry` — download from HF Hub with auth token support
+- [x] 🔴 **P0** | Implement streaming download with progress reporting — per-byte progress callbacks
 - [ ] 🔴 **P0** | Implement SHA-256 verification after download — using `sha2` crate
-- [ ] 🔴 **P0** | Implement atomic file writes — download to `.tmp`, verify, rename
+- [x] 🔴 **P0** | Implement atomic file writes — download to `.tmp`, verify, rename
 - [ ] 🟡 **P1** | Resume interrupted downloads — HTTP Range header support
 - [ ] 🟡 **P1** | LRU cache eviction — when total model size exceeds configurable limit
 - [ ] 🟡 **P1** | Concurrent download limiting — max 2 simultaneous downloads
@@ -887,15 +887,15 @@
 
 ## 🚀 Distribution
 
-- [ ] 🔴 **P0** | Cross-compile for Linux x86_64 — musl static linking
-- [ ] 🔴 **P0** | Cross-compile for macOS x86_64 — universal binary
-- [ ] 🔴 **P0** | Cross-compile for macOS aarch64 (Apple Silicon) — native ARM
-- [ ] 🔴 **P0** | Cross-compile for Windows x86_64 — MSVC static linking
+- [x] 🔴 **P0** | Cross-compile for Linux x86_64 — musl static linking
+- [x] 🔴 **P0** | Cross-compile for macOS x86_64 — universal binary
+- [x] 🔴 **P0** | Cross-compile for macOS aarch64 (Apple Silicon) — native ARM
+- [x] 🔴 **P0** | Cross-compile for Windows x86_64 — MSVC static linking
 - [ ] 🟡 **P1** | Cross-compile for Linux aarch64 — ARM servers and Raspberry Pi
-- [ ] 🟡 **P1** | Binary size optimization — strip debug symbols, LTO, UPX
-- [ ] 🟡 **P1** | GitHub Release automation — upload binaries on version tag
+- [x] 🟡 **P1** | Binary size optimization — strip debug symbols, LTO, UPX
+- [x] 🟡 **P1** | GitHub Release automation — upload binaries on version tag
 - [ ] 🟡 **P1** | Install script — `curl -fsSL ... | sh` for Linux/macOS
-- [ ] 🟡 **P1** | Docker image (CPU) — multi-stage build with minimal runtime
+- [x] 🟡 **P1** | Docker image (CPU) — multi-stage build with minimal runtime
 - [ ] 🟡 **P1** | Docker image (GPU) — NVIDIA CUDA base image
 - [ ] 🟢 **P2** | Homebrew formula — macOS package manager
 - [ ] 🟢 **P2** | AUR package — Arch Linux user repository

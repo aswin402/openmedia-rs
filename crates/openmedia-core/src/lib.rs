@@ -10,5 +10,5 @@ pub use config::{Config, ComputeBackend};
 pub use error::{OpenMediaError, Result};
 pub use hardware::{HardwareInfo, CpuInfo, CpuFeatures, GpuInfo, GpuVendor, GpuApiSupport, RamInfo};
 pub use models::{ModelInfo, ModelCategory, ModelFormat, ModelRegistry};
-pub use progress::{ProgressReporter, McpProgressReporter, NullProgressReporter, ProgressUpdate};
+pub use progress::{ProgressReporter, McpProgressReporter, NullProgressReporter, StderrProgressReporter, ProgressUpdate};
 pub use types::{ImageOutput, VideoSpec, SvgOutput, AnimatedSvgOutput, QualityScore};

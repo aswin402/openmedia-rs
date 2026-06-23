@@ -17,7 +17,13 @@ The inspiration for OpenMedia-RS comes from:
 
 ---
 
-## ⚡ What We Have Done (v0.0.6 Self-Improvement System Completion)
+## ⚡ What We Have Done (v0.0.7 Polish & Release Completion)
+* **Model Auto-Download Experience (`openmedia-core`)**: Integrated registry streams to download CLIP text, CLIP vision, and LAION Aesthetic predictor models directly from the Hugging Face Hub, utilizing `reqwest` chunk-by-chunk streams.
+* **Telemetry Progress Isolation**: Configured a thread-safe `StderrProgressReporter` to emit per-byte streaming progress metrics directly to `stderr`, preserving the integrity of standard output (`stdout`) for clean MCP JSON-RPC stdio transport communication.
+* **Production Dockerization**: Set up a multi-stage production `Dockerfile` creating a lightweight Debian-slim container pre-configured with headless Chrome and FFmpeg runtime requirements.
+* **CI/CD & GitHub Actions Release Automation**: Added `.github/workflows/release.yml` with a cross-compilation pipeline matrix building and publishing optimized assets for Linux (x86_64), macOS (x86_64, aarch64), and Windows (x86_64) on tag pushes.
+* **Release Profile Optimizations**: Configured optimized release settings (`opt-level = 3`, LTO, codegen-units, panic abort, strip) inside the workspace [Cargo.toml](Cargo.toml) to minimize binary sizes and maximize speed.
+* **Model Download MCP Tool**: Registered the `model_download` tool over the stdio interface, enabling AI agents to pull models on-demand.
 * **Multi-Crate Workspace Architecture**: Created an 8-crate workspace spanning core engine, image, video, SVG, animate, process, quality improvement, and MCP server crates.
 * **Dyn Compatible Trait Architecture**: Annotated [DiffusionPipeline](crates/openmedia-image/src/lib.rs) and [FrameRenderer](crates/openmedia-video/src/lib.rs) with `#[async_trait]` to resolve compiler object safety blockers.
 * **JSON-RPC Stdio Loop**: Fully wired [OpenMediaServer](crates/openmedia-mcp/src/lib.rs) with the `rmcp` SDK macros (`#[tool_router(server_handler)]` and `#[tool]`), running completely over stdio transport.
@@ -41,8 +47,8 @@ The inspiration for OpenMedia-RS comes from:
   * **Generation History Database**: Logs all tool outputs, request inputs, aesthetic scores, and generation parameters to a version-controlled SQLite database schema.
   * **Prompt Refiner**: Applies quality-boosting modifier tokens and default defect-reducing negative prompts based on quality score feedback.
   * **Iterative Refinement Loop**: Runs auto-refine feedback chains (generate → score → refine → rebuild) using fallback vector rendering.
-* **19 MCP Tools Registered**: Integrated 6 animation tools, 8 video tools, and 5 quality self-improvement tools (`improve_score_image`, `improve_refine_prompt`, `improve_auto_refine`, `improve_feedback`, `improve_quality_report`) into the JSON-RPC Stdio router transport.
-* **Tested & Sandbox Verified**: Built robust unit and integration tests verifying MCP tool bindings, schema generation, image encoding, video compilation, transitions, audio mixing, history database inserts, and prompt refinement. Tests pass cleanly with `cargo test --workspace`.
+* **20 MCP Tools Registered**: Integrated 6 animation tools, 8 video tools, 5 quality self-improvement tools (`improve_score_image`, `improve_refine_prompt`, `improve_auto_refine`, `improve_feedback`, `improve_quality_report`), and the model management tool into the JSON-RPC Stdio router transport.
+* **Tested & Sandbox Verified**: Built robust unit and integration tests verifying MCP tool bindings, schema generation, image encoding, video compilation, transitions, audio mixing, history database inserts, prompt refinement, and registry model downloads. Tests pass cleanly with `cargo test --workspace`.
 
 ---
 
@@ -90,7 +96,11 @@ OpenMedia-RS exposes the following Model Context Protocol (MCP) tools directly t
 * **`improve_feedback`** (Active 🟢): Log manual rating scores and artifact description comments on specific generations.
 * **`improve_quality_report`** (Active 🟢): Fetch comprehensive quality database statistics and trends over time.
 
+### 6. Model Management & Downloads (`openmedia-core`)
+* **`model_download`** (Active 🟢): Download a specified model file (CLIP text/vision or Aesthetic predictor) from Hugging Face Hub with progress tracking directly to stderr.
+
 ---
+
 
 ## 💻 System Requirements
 

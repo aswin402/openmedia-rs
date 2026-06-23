@@ -552,6 +552,12 @@ fn parse_svg_dimensions(svg: &str) -> (u32, u32) {
     (width, height)
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct ModelDownloadRequest {
+    /// Unique model identifier (e.g., "clip-vit-b32-text", "clip-vit-b32-vision", or "aesthetic-predictor")
+    pub id: String,
+}
+
 #[tool_router(server_handler)]
 impl OpenMediaServer {
     #[tool(description = "Ping the media generation server to check status and health")]
@@ -561,6 +567,30 @@ impl OpenMediaServer {
             self.hardware.cpu.brand,
             self.hardware.gpu.as_ref().map(|g| &g.name)
         )
+    }
+
+    #[tool(
+        name = "model_download",
+        description = "Download a specified model file (CLIP text/vision or Aesthetic predictor) from Hugging Face Hub with progress tracking."
+    )]
+    pub async fn model_download(
+        &self,
+        params: Parameters<ModelDownloadRequest>,
+    ) -> Result<Json<serde_json::Value>, String> {
+        let req = params.0;
+        let reporter = openmedia_core::StderrProgressReporter::new(req.id.clone());
+        
+        let path = self.model_registry.download_model(&req.id, &reporter)
+            .await
+            .map_err(|e| e.to_string())?;
+
+        let response = serde_json::json!({
+            "status": "success",
+            "model_id": req.id,
+            "path": path.to_string_lossy(),
+        });
+
+        Ok(Json(response))
     }
 
     #[tool(
@@ -2287,6 +2317,28 @@ mod tests {
         let server = OpenMediaServer::new(config).await.unwrap();
         let response = server.ping().await;
         assert!(response.starts_with("pong"));
+    }
+
+    #[tokio::test]
+    async fn test_mcp_model_download_invalid() {
+        let mut config = Config::default();
+        let temp_dir = std::env::temp_dir();
+        config.paths.model_dir = temp_dir.join("openmedia_test_models_invalid");
+        config.paths.output_dir = temp_dir.join("openmedia_test_output_invalid");
+        config.paths.history_db = temp_dir.join("openmedia_test_history_invalid.db");
+
+        let _ = std::fs::create_dir_all(&config.paths.output_dir);
+        let server = OpenMediaServer::new(config).await.unwrap();
+
+        let params = Parameters(ModelDownloadRequest {
+            id: "non-existent-model-id".to_string(),
+        });
+
+        let result = server.model_download(params).await;
+        assert!(result.is_err());
+        if let Err(err) = result {
+            assert!(err.contains("Model not found"));
+        }
     }
 
     #[tokio::test]

@@ -103,3 +103,38 @@ impl ProgressReporter for NullProgressReporter {
         ""
     }
 }
+
+/// Progress reporter that prints updates directly to stderr
+pub struct StderrProgressReporter {
+    token: String,
+}
+
+impl StderrProgressReporter {
+    pub fn new(token: String) -> Self {
+        Self { token }
+    }
+}
+
+impl ProgressReporter for StderrProgressReporter {
+    fn report(&self, progress: u64, total: u64, message: &str) {
+        if total > 0 {
+            let pct = (progress as f64 / total as f64) * 100.0;
+            eprintln!("[{}] Progress: {:.2}% ({}/{}) - {}", self.token, pct, progress, total, message);
+        } else {
+            eprintln!("[{}] Progress: {} - {}", self.token, progress, message);
+        }
+    }
+
+    fn complete(&self, message: &str) {
+        eprintln!("[{}] Complete: {}", self.token, message);
+    }
+
+    fn fail(&self, error: &str) {
+        eprintln!("[{}] Fail: {}", self.token, error);
+    }
+
+    fn token(&self) -> &str {
+        &self.token
+    }
+}
+
