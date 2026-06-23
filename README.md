@@ -17,7 +17,8 @@ The inspiration for OpenMedia-RS comes from:
 
 ---
 
-## ⚡ What We Have Done (v0.0.10 Custom Mermaid Styling & Theme Overrides)
+## ⚡ What We Have Done (v0.0.11 Pre-Designed Video Templates)
+* **Pre-Designed Video Templates (`video_from_template`)**: Implemented matching and scene composition engines for `data_dashboard` (statistical charts, dark-themed title slides), `social_media` (vertical 9:16 layout format with slide-up content keyframes), and `product_showcase` (multi-scene image showcase with fade/slide animation timelines) templates.
 * **Custom Mermaid Styling & Theme Overrides (`diagram_generate_mermaid`)**: Extended the Mermaid diagram generator to support theme presets (`default`, `dark`, `forest`, `neutral`), custom layout spacing configurations, and custom JSON field styling overrides.
 * **Refined Lightweight Architecture**: Re-scoped the project to focus on a strictly lightweight vector rendering, diagram compilation, and layout animation engine (< 50MB RAM/ROM footprint). Bypassed heavy local AI diffusion models in favor of online LLM/multimodal agents acting as the visual code designers.
 * **JSON-to-SVG Canvas Engine (`openmedia-svg`)**: Implemented deserialization schema rules for structured canvas shapes (Rects, Circles, Texts) to compile JSON arrays into standard SVG vector markup natively.

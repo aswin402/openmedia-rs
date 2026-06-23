@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v0.0.11] - 2026-06-23
+
+### Added
+- **Pre-Designed Video Templates**: Implemented `data_dashboard`, `social_media`, and `product_showcase` template matches and scene structures in the `video_from_template` tool.
+- **Dynamic Layout Assembly**: Added support for statistical title cards, custom charts embedding, vertical 9:16 layout formats, animations, and transitions.
+- **Integration Tests**: Added `test_mcp_video_template_data_dashboard` to verify correct template compilation and output path validation.
+
 ## [v0.0.10] - 2026-06-23
 
 ### Added
