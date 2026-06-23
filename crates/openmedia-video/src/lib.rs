@@ -1386,11 +1386,20 @@ pub async fn render_video_scene(
         ])
         .arg(output_path);
 
-        audio_cmd.stdout(std::process::Stdio::null())
-                 .stderr(std::process::Stdio::null());
+        audio_cmd.stdout(std::process::Stdio::piped())
+                 .stderr(std::process::Stdio::piped());
 
-        let mut mix_child = audio_cmd.spawn().map_err(OpenMediaError::IoError)?;
-        mix_child.wait().await.map_err(OpenMediaError::IoError)?;
+        let mix_child = audio_cmd.spawn().map_err(OpenMediaError::IoError)?;
+        let output = mix_child.wait_with_output().await.map_err(OpenMediaError::IoError)?;
+        
+        if !output.status.success() {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            return Err(OpenMediaError::EncodingError(format!(
+                "FFmpeg audio mixing failed with status {:?}.\nStdout: {}\nStderr: {}",
+                output.status.code(), stdout, stderr
+            )));
+        }
         
         let _ = std::fs::remove_file(temp_silent);
     } else {
