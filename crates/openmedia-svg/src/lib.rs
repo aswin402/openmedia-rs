@@ -4,8 +4,10 @@ use std::collections::HashMap;
 
 pub mod schema;
 pub mod chart;
+pub mod icons;
 
 pub use chart::{create_chart, ChartPoint};
+pub use icons::get_icon_svg;
 
 
 #[derive(Debug, Clone)]
