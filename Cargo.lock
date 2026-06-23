@@ -3119,6 +3119,8 @@ dependencies = [
 name = "openmedia-improve"
 version = "0.1.0"
 dependencies = [
+ "image",
+ "ndarray",
  "openmedia-core",
  "openmedia-image",
  "ort",
@@ -3134,6 +3136,7 @@ dependencies = [
 name = "openmedia-mcp"
 version = "0.1.0"
 dependencies = [
+ "chrono",
  "image",
  "openmedia-animate",
  "openmedia-core",

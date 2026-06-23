@@ -17,7 +17,7 @@ The inspiration for OpenMedia-RS comes from:
 
 ---
 
-## ⚡ What We Have Done (v0.0.5 Video Generation Engine Completion)
+## ⚡ What We Have Done (v0.0.6 Self-Improvement System Completion)
 * **Multi-Crate Workspace Architecture**: Created an 8-crate workspace spanning core engine, image, video, SVG, animate, process, quality improvement, and MCP server crates.
 * **Dyn Compatible Trait Architecture**: Annotated [DiffusionPipeline](crates/openmedia-image/src/lib.rs) and [FrameRenderer](crates/openmedia-video/src/lib.rs) with `#[async_trait]` to resolve compiler object safety blockers.
 * **JSON-RPC Stdio Loop**: Fully wired [OpenMediaServer](crates/openmedia-mcp/src/lib.rs) with the `rmcp` SDK macros (`#[tool_router(server_handler)]` and `#[tool]`), running completely over stdio transport.
@@ -36,8 +36,13 @@ The inspiration for OpenMedia-RS comes from:
   * **Transitions Blender**: Implements frame-level crossfades, slides, and wipes between scene clips.
   * **Piped Video Encoder**: Encodes raw frame streams using an optimized FFmpeg pipe over stdin, outputting H.264/AAC MP4 files.
   * **Audio Track Mixer**: Dynamically mixes background narration and music tracks with configurable offsets, volumes, and fade timings.
-* **14 MCP Tools Registered**: Added 6 animation tools and 8 video tools (`video_create`, `video_preview`, `video_create_slideshow`, `video_add_transition`, `video_add_audio`, `video_from_template`, `video_extract_frames`, `video_trim`) to the stdio MCP transport interface.
-* **Tested & Sandbox Verified**: Built robust unit and integration tests verifying MCP tool bindings, schema generation, image encoding, video compilation, transitions, and audio mixing. Tests pass cleanly with `cargo test --workspace`.
+* **Scoring & Self-Improvement System (`openmedia-improve`)**:
+  * **CLIP Scorer**: Computes cosine similarity between image and text embeddings using `ort` (ONNX Runtime) session execution with Lanczos3 image scaling and BPE tokenization.
+  * **Generation History Database**: Logs all tool outputs, request inputs, aesthetic scores, and generation parameters to a version-controlled SQLite database schema.
+  * **Prompt Refiner**: Applies quality-boosting modifier tokens and default defect-reducing negative prompts based on quality score feedback.
+  * **Iterative Refinement Loop**: Runs auto-refine feedback chains (generate → score → refine → rebuild) using fallback vector rendering.
+* **19 MCP Tools Registered**: Integrated 6 animation tools, 8 video tools, and 5 quality self-improvement tools (`improve_score_image`, `improve_refine_prompt`, `improve_auto_refine`, `improve_feedback`, `improve_quality_report`) into the JSON-RPC Stdio router transport.
+* **Tested & Sandbox Verified**: Built robust unit and integration tests verifying MCP tool bindings, schema generation, image encoding, video compilation, transitions, audio mixing, history database inserts, and prompt refinement. Tests pass cleanly with `cargo test --workspace`.
 
 ---
 
@@ -77,6 +82,13 @@ OpenMedia-RS exposes the following Model Context Protocol (MCP) tools directly t
 * **`animate_generate_spinner`** (Active 🟢): Generate beautiful animated loading spinner SVGs.
 * **`animate_from_lottie`** (Active 🟢): Import Lottie JSON and convert to an animated SVG.
 * **`animate_to_lottie`** (Active 🟢): Export SVG to Lottie JSON.
+
+### 5. Quality Evaluation & Self-Improvement (`openmedia-improve`)
+* **`improve_score_image`** (Active 🟢): Score an image's alignment to a text prompt using CLIP and visual aesthetic predictor models.
+* **`improve_refine_prompt`** (Active 🟢): Get prompt refinement modifications and recommendations based on quality parameters.
+* **`improve_auto_refine`** (Active 🟢): Refine generated assets iteratively, evaluating intermediate output quality and logging historical chains.
+* **`improve_feedback`** (Active 🟢): Log manual rating scores and artifact description comments on specific generations.
+* **`improve_quality_report`** (Active 🟢): Fetch comprehensive quality database statistics and trends over time.
 
 ---
 

@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v0.0.6] - 2026-06-23
+
+### Added
+- **Scoring Engine (`openmedia-improve`)**: Implemented CLIP text-image alignment scoring using ONNX Runtime (`ort`) and ndarray preprocessing (Lanczos3 resize, mean/std normalization, NCHW flat float representation, cosine similarity calculation). Implemented LAION aesthetic scorer linear probe inference placeholder. Built fallback/mock scorer mechanisms when model files are not yet loaded.
+- **Generation History System**: Set up a SQLite database system to record generation records (inputs, outputs, parameters, scores, timestamps) automatically, supporting complex queries, stats collection, and user feedback submission.
+- **Prompt Refinement System**: Implemented iterative prompt refiner that appends quality suffixes ("highly detailed", "professional", etc.) and default negative parameters ("blurry", "low quality"), adjusting steps and CFG guidance dynamically based on score history.
+- **5 Self-Improvement MCP Tools**: Exposed `improve_score_image`, `improve_refine_prompt`, `improve_auto_refine` (implementing a complete SVG rendering and rasterizing refinement loop with database record chaining), `improve_feedback`, and `improve_quality_report` JSON-RPC tools.
+- **Integrated Verification Suites**: Added comprehensive tests in `mcp_improve_tests.rs` verifying scoring, refinement suggestions, auto-refinement loops, feedback, and database statistics.
+
+### Fixed
+- Fixed compilation and borrow checker issues with `ort` session builders by wrapping session objects in thread-safe `Mutex` wrappers.
+- Handled type compatibility of output maps from ONNX inference by directly extracting output tensors from the result iterators.
+- Corrected raw string literal terminations in SVG template generation by switching to `r##` delimiters to safely allow `#` characters.
+
 ## [v0.0.5] - 2026-06-23
 
 ### Added

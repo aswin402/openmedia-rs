@@ -15,6 +15,7 @@ openmedia-process = { workspace = true }
 openmedia-improve = { workspace = true }
 uuid = { workspace = true }
 image = { workspace = true }
+chrono = { version = "0.4", features = ["serde"] }
 
 tokio = { workspace = true }
 serde = { workspace = true }

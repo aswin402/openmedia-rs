@@ -13,6 +13,8 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
 tracing = { workspace = true }
+image = { workspace = true }
+ndarray = "0.17"
 
 ort = { version = "2.0.0-rc.9", default-features = false, features = ["half", "ndarray", "std", "tls-rustls", "download-binaries"] }
 rusqlite = { version = "0.32", features = ["bundled"] }
