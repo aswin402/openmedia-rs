@@ -582,6 +582,50 @@ pub struct GenerateMermaidRequest {
     pub preferred_aspect_ratio: Option<f32>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct CreateSvgRequest {
+    /// Target canvas width in pixels
+    pub width: u32,
+    /// Target canvas height in pixels
+    pub height: u32,
+    /// JSON array of elements mapping to schema shapes
+    pub elements: serde_json::Value,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct ChartPointDto {
+    /// X-axis category label
+    pub label: String,
+    /// Y-axis numeric value
+    pub value: f64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct CreateChartRequest {
+    /// Type of chart (bar, line, pie)
+    pub chart_type: String,
+    /// Optional main title text for the chart
+    pub title: Option<String>,
+    /// Array of data points containing labels and values
+    pub data: Vec<ChartPointDto>,
+    /// Target image width (default 800)
+    pub width: Option<u32>,
+    /// Target height (default 600)
+    pub height: Option<u32>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct CreateIconRequest {
+    /// Name of the icon to retrieve (e.g. home, user, settings)
+    pub name: String,
+    /// Custom size in pixels (default 24)
+    pub size: Option<u32>,
+    /// Custom stroke/fill color hex (default #ffffff)
+    pub color: Option<String>,
+    /// Custom stroke width (default 2.0)
+    pub stroke_width: Option<f32>,
+}
+
 #[tool_router(server_handler)]
 impl OpenMediaServer {
     #[tool(description = "Ping the media generation server to check status and health")]
@@ -2405,6 +2449,164 @@ impl OpenMediaServer {
 
         Ok(Json(response))
     }
+
+    #[tool(
+        name = "create_svg",
+        description = "Generate a custom SVG layout from a list of JSON-defined shapes and primitives and save to output directory"
+    )]
+    pub async fn create_svg(
+        &self,
+        params: Parameters<CreateSvgRequest>,
+    ) -> Result<Json<serde_json::Value>, String> {
+        let req = params.0;
+        let start_time = std::time::Instant::now();
+        let _ = std::fs::create_dir_all(&self.config.paths.output_dir);
+
+        let svg_content = openmedia_svg::build_svg_from_json(req.width, req.height, &req.elements)
+            .map_err(|e| e.to_string())?;
+
+        let filename = format!("{}.svg", uuid::Uuid::now_v7());
+        let output_path = self.config.paths.output_dir.join(filename);
+
+        std::fs::write(&output_path, &svg_content)
+            .map_err(|e| format!("Failed to write SVG output: {}", e))?;
+
+        let file_size = std::fs::metadata(&output_path)
+            .map(|m| m.len())
+            .unwrap_or(svg_content.len() as u64);
+
+        let (w, h) = parse_svg_dimensions(&svg_content);
+        let generation_time = start_time.elapsed().as_secs_f64();
+
+        let output = openmedia_core::ImageOutput {
+            path: output_path,
+            width: w,
+            height: h,
+            seed: 0,
+            format: "svg".to_string(),
+            file_size,
+            generation_id: uuid::Uuid::now_v7().to_string(),
+            clip_score: None,
+            aesthetic_score: None,
+            model_used: "svg-builder".to_string(),
+            backend_used: "svg-builder".to_string(),
+            generation_time,
+        };
+
+        serde_json::to_value(output)
+            .map(Json)
+            .map_err(|e| e.to_string())
+    }
+
+    #[tool(
+        name = "create_chart",
+        description = "Generate a custom bar, line, or pie chart from a list of data points and save to output directory"
+    )]
+    pub async fn create_chart(
+        &self,
+        params: Parameters<CreateChartRequest>,
+    ) -> Result<Json<serde_json::Value>, String> {
+        let req = params.0;
+        let start_time = std::time::Instant::now();
+        let _ = std::fs::create_dir_all(&self.config.paths.output_dir);
+
+        let width = req.width.unwrap_or(800);
+        let height = req.height.unwrap_or(600);
+
+        let data: Vec<openmedia_svg::ChartPoint> = req.data.into_iter().map(|p| {
+            openmedia_svg::ChartPoint {
+                label: p.label,
+                value: p.value,
+            }
+        }).collect();
+
+        let svg_content = openmedia_svg::create_chart(&req.chart_type, req.title.as_deref(), &data, width, height)
+            .map_err(|e| e.to_string())?;
+
+        let filename = format!("{}.svg", uuid::Uuid::now_v7());
+        let output_path = self.config.paths.output_dir.join(filename);
+
+        std::fs::write(&output_path, &svg_content)
+            .map_err(|e| format!("Failed to write SVG output: {}", e))?;
+
+        let file_size = std::fs::metadata(&output_path)
+            .map(|m| m.len())
+            .unwrap_or(svg_content.len() as u64);
+
+        let (w, h) = parse_svg_dimensions(&svg_content);
+        let generation_time = start_time.elapsed().as_secs_f64();
+
+        let output = openmedia_core::ImageOutput {
+            path: output_path,
+            width: w,
+            height: h,
+            seed: 0,
+            format: "svg".to_string(),
+            file_size,
+            generation_id: uuid::Uuid::now_v7().to_string(),
+            clip_score: None,
+            aesthetic_score: None,
+            model_used: "chart-builder".to_string(),
+            backend_used: "chart-builder".to_string(),
+            generation_time,
+        };
+
+        serde_json::to_value(output)
+            .map(Json)
+            .map_err(|e| e.to_string())
+    }
+
+    #[tool(
+        name = "create_icon",
+        description = "Retrieve a custom scaled vector interface icon by name and save to output directory"
+    )]
+    pub async fn create_icon(
+        &self,
+        params: Parameters<CreateIconRequest>,
+    ) -> Result<Json<serde_json::Value>, String> {
+        let req = params.0;
+        let start_time = std::time::Instant::now();
+        let _ = std::fs::create_dir_all(&self.config.paths.output_dir);
+
+        let size = req.size.unwrap_or(24);
+        let color = req.color.unwrap_or_else(|| "#ffffff".to_string());
+        let stroke_width = req.stroke_width.unwrap_or(2.0);
+
+        let svg_content = openmedia_svg::get_icon_svg(&req.name, size, &color, stroke_width)
+            .ok_or_else(|| format!("Icon '{}' not found in library", req.name))?;
+
+        let filename = format!("{}.svg", uuid::Uuid::now_v7());
+        let output_path = self.config.paths.output_dir.join(filename);
+
+        std::fs::write(&output_path, &svg_content)
+            .map_err(|e| format!("Failed to write SVG output: {}", e))?;
+
+        let file_size = std::fs::metadata(&output_path)
+            .map(|m| m.len())
+            .unwrap_or(svg_content.len() as u64);
+
+        let (w, h) = parse_svg_dimensions(&svg_content);
+        let generation_time = start_time.elapsed().as_secs_f64();
+
+        let output = openmedia_core::ImageOutput {
+            path: output_path,
+            width: w,
+            height: h,
+            seed: 0,
+            format: "svg".to_string(),
+            file_size,
+            generation_id: uuid::Uuid::now_v7().to_string(),
+            clip_score: None,
+            aesthetic_score: None,
+            model_used: "icon-library".to_string(),
+            backend_used: "icon-library".to_string(),
+            generation_time,
+        };
+
+        serde_json::to_value(output)
+            .map(Json)
+            .map_err(|e| e.to_string())
+    }
 }
 
 fn override_theme_fields(theme: &mut mermaid_rs_renderer::Theme, overrides: &serde_json::Value) {
@@ -2969,5 +3171,114 @@ mod tests {
         assert_eq!(val_export["w"].as_u64(), Some(800));
 
         let _ = std::fs::remove_file(out_import.path);
+    }
+
+    #[tokio::test]
+    async fn test_mcp_create_svg() {
+        let mut config = Config::default();
+        let temp_dir = std::env::temp_dir();
+        config.paths.model_dir = temp_dir.join("openmedia_test_models_create_svg");
+        config.paths.output_dir = temp_dir.join("openmedia_test_output_create_svg");
+        config.paths.history_db = temp_dir.join("openmedia_test_history_create_svg.db");
+
+        let _ = std::fs::create_dir_all(&config.paths.output_dir);
+        let server = OpenMediaServer::new(config).await.unwrap();
+
+        let elements_json = serde_json::json!([
+            {"type": "rect", "x": 10.0, "y": 10.0, "width": 100.0, "height": 50.0, "fill": "blue"},
+            {"type": "circle", "cx": 50.0, "cy": 50.0, "r": 30.0, "fill": "red"}
+        ]);
+
+        let params = Parameters(CreateSvgRequest {
+            width: 800,
+            height: 600,
+            elements: elements_json,
+        });
+
+        let result = server.create_svg(params).await;
+        assert!(result.is_ok());
+        let val = result.unwrap().0;
+        let output: openmedia_core::ImageOutput = serde_json::from_value(val).unwrap();
+        assert_eq!(output.width, 800);
+        assert_eq!(output.height, 600);
+        assert!(output.path.exists());
+
+        let svg_content = std::fs::read_to_string(&output.path).unwrap();
+        assert!(svg_content.contains("rect x=\"10\""));
+        assert!(svg_content.contains("circle cx=\"50\""));
+
+        let _ = std::fs::remove_file(output.path);
+    }
+
+    #[tokio::test]
+    async fn test_mcp_create_chart() {
+        let mut config = Config::default();
+        let temp_dir = std::env::temp_dir();
+        config.paths.model_dir = temp_dir.join("openmedia_test_models_create_chart");
+        config.paths.output_dir = temp_dir.join("openmedia_test_output_create_chart");
+        config.paths.history_db = temp_dir.join("openmedia_test_history_create_chart.db");
+
+        let _ = std::fs::create_dir_all(&config.paths.output_dir);
+        let server = OpenMediaServer::new(config).await.unwrap();
+
+        let data = vec![
+            ChartPointDto { label: "A".to_string(), value: 10.0 },
+            ChartPointDto { label: "B".to_string(), value: 20.0 }
+        ];
+
+        let params = Parameters(CreateChartRequest {
+            chart_type: "bar".to_string(),
+            title: Some("Test Chart".to_string()),
+            data,
+            width: Some(800),
+            height: Some(600),
+        });
+
+        let result = server.create_chart(params).await;
+        assert!(result.is_ok());
+        let val = result.unwrap().0;
+        let output: openmedia_core::ImageOutput = serde_json::from_value(val).unwrap();
+        assert_eq!(output.width, 800);
+        assert_eq!(output.height, 600);
+        assert!(output.path.exists());
+
+        let svg_content = std::fs::read_to_string(&output.path).unwrap();
+        assert!(svg_content.contains("Test Chart"));
+        assert!(svg_content.contains("<rect"));
+
+        let _ = std::fs::remove_file(output.path);
+    }
+
+    #[tokio::test]
+    async fn test_mcp_create_icon() {
+        let mut config = Config::default();
+        let temp_dir = std::env::temp_dir();
+        config.paths.model_dir = temp_dir.join("openmedia_test_models_create_icon");
+        config.paths.output_dir = temp_dir.join("openmedia_test_output_create_icon");
+        config.paths.history_db = temp_dir.join("openmedia_test_history_create_icon.db");
+
+        let _ = std::fs::create_dir_all(&config.paths.output_dir);
+        let server = OpenMediaServer::new(config).await.unwrap();
+
+        let params = Parameters(CreateIconRequest {
+            name: "home".to_string(),
+            size: Some(32),
+            color: Some("#ff0000".to_string()),
+            stroke_width: Some(2.5),
+        });
+
+        let result = server.create_icon(params).await;
+        assert!(result.is_ok());
+        let val = result.unwrap().0;
+        let output: openmedia_core::ImageOutput = serde_json::from_value(val).unwrap();
+        assert_eq!(output.width, 32);
+        assert_eq!(output.height, 32);
+        assert!(output.path.exists());
+
+        let svg_content = std::fs::read_to_string(&output.path).unwrap();
+        assert!(svg_content.contains("stroke=\"#ff0000\""));
+        assert!(svg_content.contains("stroke-width=\"2.5\""));
+
+        let _ = std::fs::remove_file(output.path);
     }
 }
