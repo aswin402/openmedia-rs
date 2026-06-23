@@ -663,7 +663,7 @@ impl OpenMediaServer {
         
         let _ = std::fs::create_dir_all(&self.config.paths.output_dir);
         
-        let svg_content = openmedia_svg::render_mermaid(&req.code)
+        let svg_content = openmedia_svg::render_mermaid(&req.code, None, None)
             .map_err(|e| format!("Failed to render Mermaid diagram: {}", e))?;
             
         let start_time = std::time::Instant::now();
@@ -2376,9 +2376,107 @@ impl OpenMediaServer {
     }
 }
 
+fn override_theme_fields(theme: &mut mermaid_rs_renderer::Theme, overrides: &serde_json::Value) {
+    if let Some(map) = overrides.as_object() {
+        for (key, val) in map {
+            if let Some(val_str) = val.as_str() {
+                match key.as_str() {
+                    "font_family" => theme.font_family = val_str.to_string(),
+                    "primary_color" => theme.primary_color = val_str.to_string(),
+                    "primary_text_color" => theme.primary_text_color = val_str.to_string(),
+                    "primary_border_color" => theme.primary_border_color = val_str.to_string(),
+                    "line_color" => theme.line_color = val_str.to_string(),
+                    "secondary_color" => theme.secondary_color = val_str.to_string(),
+                    "tertiary_color" => theme.tertiary_color = val_str.to_string(),
+                    "edge_label_background" => theme.edge_label_background = val_str.to_string(),
+                    "cluster_background" => theme.cluster_background = val_str.to_string(),
+                    "cluster_border" => theme.cluster_border = val_str.to_string(),
+                    "background" => theme.background = val_str.to_string(),
+                    "sequence_actor_fill" => theme.sequence_actor_fill = val_str.to_string(),
+                    "sequence_actor_border" => theme.sequence_actor_border = val_str.to_string(),
+                    "sequence_actor_line" => theme.sequence_actor_line = val_str.to_string(),
+                    "sequence_note_fill" => theme.sequence_note_fill = val_str.to_string(),
+                    "sequence_note_border" => theme.sequence_note_border = val_str.to_string(),
+                    "sequence_activation_fill" => theme.sequence_activation_fill = val_str.to_string(),
+                    "sequence_activation_border" => theme.sequence_activation_border = val_str.to_string(),
+                    "text_color" => theme.text_color = val_str.to_string(),
+                    _ => {}
+                }
+            } else if let Some(val_f64) = val.as_f64() {
+                if key == "font_size" {
+                    theme.font_size = val_f64 as f32;
+                }
+            }
+        }
+    }
+}
+
+fn resolve_theme_preset(preset: &str) -> mermaid_rs_renderer::Theme {
+    match preset.to_lowercase().as_str() {
+        "default" | "classic" => mermaid_rs_renderer::Theme::mermaid_default(),
+        "dark" => {
+            let mut theme = mermaid_rs_renderer::Theme::modern();
+            theme.background = "#0f172a".to_string();
+            theme.primary_color = "#1e293b".to_string();
+            theme.primary_text_color = "#f8fafc".to_string();
+            theme.primary_border_color = "#475569".to_string();
+            theme.line_color = "#94a3b8".to_string();
+            theme.secondary_color = "#334155".to_string();
+            theme.tertiary_color = "#0f172a".to_string();
+            theme.text_color = "#f8fafc".to_string();
+            theme.edge_label_background = "#1e293b".to_string();
+            theme.cluster_background = "#1e293b".to_string();
+            theme.cluster_border = "#334155".to_string();
+            theme
+        }
+        "forest" => {
+            let mut theme = mermaid_rs_renderer::Theme::modern();
+            theme.primary_color = "#f0fdf4".to_string();
+            theme.primary_text_color = "#166534".to_string();
+            theme.primary_border_color = "#86efac".to_string();
+            theme.line_color = "#15803d".to_string();
+            theme.secondary_color = "#dcfce7".to_string();
+            theme.tertiary_color = "#ffffff".to_string();
+            theme.text_color = "#166534".to_string();
+            theme.edge_label_background = "#ffffff".to_string();
+            theme.cluster_background = "#f0fdf4".to_string();
+            theme.cluster_border = "#bbf7d0".to_string();
+            theme
+        }
+        "neutral" => {
+            let mut theme = mermaid_rs_renderer::Theme::modern();
+            theme.primary_color = "#f9fafb".to_string();
+            theme.primary_text_color = "#111827".to_string();
+            theme.primary_border_color = "#e5e7eb".to_string();
+            theme.line_color = "#4b5563".to_string();
+            theme.secondary_color = "#f3f4f6".to_string();
+            theme.tertiary_color = "#ffffff".to_string();
+            theme.text_color = "#111827".to_string();
+            theme.edge_label_background = "#ffffff".to_string();
+            theme.cluster_background = "#f9fafb".to_string();
+            theme.cluster_border = "#d1d5db".to_string();
+            theme
+        }
+        _ => mermaid_rs_renderer::Theme::modern(),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_theme_preset_override() {
+        let mut theme = mermaid_rs_renderer::Theme::modern();
+        let overrides = serde_json::json!({
+            "primary_color": "#00ff00",
+            "font_size": 20.0
+        });
+        override_theme_fields(&mut theme, &overrides);
+        assert_eq!(theme.primary_color, "#00ff00");
+        assert_eq!(theme.font_size, 20.0);
+    }
+
 
     #[tokio::test]
     async fn test_mcp_ping() {

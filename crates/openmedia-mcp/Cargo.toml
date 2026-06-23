@@ -16,6 +16,7 @@ openmedia-improve = { workspace = true }
 uuid = { workspace = true }
 image = { workspace = true }
 chrono = { version = "0.4", features = ["serde"] }
+mermaid-rs-renderer = "0.2"
 
 tokio = { workspace = true }
 serde = { workspace = true }

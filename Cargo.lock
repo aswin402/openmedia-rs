@@ -3339,6 +3339,7 @@ version = "0.0.8"
 dependencies = [
  "chrono",
  "image",
+ "mermaid-rs-renderer",
  "openmedia-animate",
  "openmedia-core",
  "openmedia-image",
