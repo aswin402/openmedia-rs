@@ -763,8 +763,16 @@ pub fn rasterize(
 }
 
 /// Render a Mermaid diagram into SVG XML content natively
-pub fn render_mermaid(code: &str) -> std::result::Result<String, String> {
-    mermaid_rs_renderer::render(code)
+pub fn render_mermaid(
+    code: &str,
+    theme: Option<mermaid_rs_renderer::Theme>,
+    layout: Option<mermaid_rs_renderer::LayoutConfig>,
+) -> std::result::Result<String, String> {
+    let options = mermaid_rs_renderer::RenderOptions {
+        theme: theme.unwrap_or_else(mermaid_rs_renderer::Theme::modern),
+        layout: layout.unwrap_or_default(),
+    };
+    mermaid_rs_renderer::render_with_options(code, options)
         .map_err(|e| format!("Failed to render Mermaid diagram: {:?}", e))
 }
 
@@ -775,10 +783,30 @@ mod tests {
     #[test]
     fn test_render_mermaid() {
         let code = "flowchart LR\n  A --> B";
-        let result = render_mermaid(code);
+        let result = render_mermaid(code, None, None);
         assert!(result.is_ok());
         let svg = result.unwrap();
         assert!(svg.contains("<svg") || svg.contains("svg"));
+    }
+
+    #[test]
+    fn test_render_mermaid_with_custom_theme() {
+        let code = "flowchart TD\n  A --> B";
+        let mut theme = mermaid_rs_renderer::Theme::modern();
+        theme.primary_color = "#ff0000".to_string(); // Bright Red
+        let result = render_mermaid(code, Some(theme), None);
+        assert!(result.is_ok());
+        let svg = result.unwrap();
+        assert!(svg.contains("#ff0000"));
+    }
+
+    #[test]
+    fn test_render_mermaid_with_layout_spacing() {
+        let code = "flowchart LR\n  A --> B";
+        let mut layout = mermaid_rs_renderer::LayoutConfig::default();
+        layout.node_spacing = 150.0;
+        let result = render_mermaid(code, None, Some(layout));
+        assert!(result.is_ok());
     }
 
     #[test]
