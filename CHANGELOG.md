@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v0.0.9] - 2026-06-23
+
+### Added
+- **JSON-to-SVG Canvas Engine**: Created `schema.rs` and implemented `build_svg_from_json` parsing JSON arrays into styled shapes (Rects, Circles, Texts) natively.
+- **Math-based SVG Chart Generator**: Built vertical bars charting, smooth bezier curve plotting, and polar coordinates pie slice drawing (using arc paths) with percentage legends.
+- **Embedded Vector Icon Library**: Bundled 20 popular Feather/Lucide vector paths (e.g., home, user, settings) to scale and style on demand.
+- **New MCP Tools**: Registered `create_svg`, `create_chart`, and `create_icon` JSON-RPC tool schemas on the MCP server.
+- **Integrated Validation Tests**: Added comprehensive integration test suites verifying correct SVG compilation and element attributes.
+
 ## [v0.0.8] - 2026-06-23
 
 ### Added

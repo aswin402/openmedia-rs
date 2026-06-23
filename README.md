@@ -17,7 +17,10 @@ The inspiration for OpenMedia-RS comes from:
 
 ---
 
-## ⚡ What We Have Done (v0.0.8 Mermaid Engine Integration)
+## ⚡ What We Have Done (v0.0.9 SVG Canvas, Chart, and Icon Engine)
+* **JSON-to-SVG Canvas Engine (`openmedia-svg`)**: Implemented deserialization schema rules for structured canvas shapes (Rects, Circles, Texts) to compile JSON arrays into standard SVG vector markup natively.
+* **Custom Chart Engine (`create_chart`)**: Built vertical bars charting, smooth bezier curve plotting, and polar coordinates pie slice drawing (using arc paths) with configurable legend keys and titles.
+* **Embedded Vector Icon Library (`create_icon`)**: Bundled 20 popular Feather/Lucide vector paths (e.g. home, user, settings, play, check) to scale and style on demand.
 * **Mermaid Diagram Engine (`openmedia-svg`)**: Integrated native Mermaid diagram compilation using `mermaid-rs-renderer`, enabling offline flowchart, sequence diagram, and architecture graph generation natively in Rust without browser or network dependencies.
 * **Mermaid MCP Tool (`diagram_generate_mermaid`)**: Registered the `diagram_generate_mermaid` tool to compile Mermaid string definitions, saving them to the output directory as SVG, PNG, JPEG, or WebP.
 * **Model Auto-Download Experience (`openmedia-core`)**: Integrated registry streams to download CLIP text, CLIP vision, and LAION Aesthetic predictor models directly from the Hugging Face Hub, utilizing `reqwest` chunk-by-chunk streams.
@@ -49,7 +52,7 @@ The inspiration for OpenMedia-RS comes from:
   * **Generation History Database**: Logs all tool outputs, request inputs, aesthetic scores, and generation parameters to a version-controlled SQLite database schema.
   * **Prompt Refiner**: Applies quality-boosting modifier tokens and default defect-reducing negative prompts based on quality score feedback.
   * **Iterative Refinement Loop**: Runs auto-refine feedback chains (generate → score → refine → rebuild) using fallback vector rendering.
-* **21 MCP Tools Registered**: Integrated 6 animation tools, 8 video tools, 5 quality self-improvement tools (`improve_score_image`, `improve_refine_prompt`, `improve_auto_refine`, `improve_feedback`, `improve_quality_report`), model download, and Mermaid diagram generation into the JSON-RPC Stdio router transport.
+* **24 MCP Tools Registered**: Integrated 6 animation tools, 8 video tools, 5 quality self-improvement tools, model download, Mermaid diagram generation, and the new SVG canvas/chart/icon builder tools.
 * **Tested & Sandbox Verified**: Built robust unit and integration tests verifying MCP tool bindings, schema generation, image encoding, video compilation, transitions, audio mixing, history database inserts, prompt refinement, and registry model downloads. Tests pass cleanly with `cargo test --workspace`.
 * **Mermaid Integration Verification**: Verification suite includes native Mermaid parser output tests and rasterized diagram image format tests.
 
@@ -80,10 +83,10 @@ OpenMedia-RS exposes the following Model Context Protocol (MCP) tools directly t
 ### 3. SVG Vector & Diagram Generation (`openmedia-svg`)
 * **`rasterize_svg`** (Active 🟢): Converts SVG vector strings or files directly to PNG, JPEG, or WebP images.
 * **`diagram_generate_mermaid`** (Active 🟢): Compiles flowcharts, sequence diagrams, and architecture graphs from Mermaid markdown text into SVG, PNG, JPEG, or WebP.
-* **`create_svg`**: Fluent path, primitive, gradient, text, and filter definition to build raw optimized SVGs.
-* **`create_chart`**: Generates bar, line, pie, scatter, radar, and gauge charts from raw JSON data.
+* **`create_svg`** (Active 🟢): Generate custom SVG layouts from a list of JSON-defined shapes and primitives.
+* **`create_chart`** (Active 🟢): Generate customizable bar, line, and pie charts from raw JSON data.
+* **`create_icon`** (Active 🟢): Retrieve styled vector interface icons from an embedded library.
 * **`create_diagram`**: Renders auto-laid-out Flowcharts, UML sequence, architecture, and ER diagrams.
-* **`create_icon`**: Accesses a built-in library of ~200 customizable icons.
 
 ### 4. SVG Animation (`openmedia-animate`)
 * **`animate_svg`** (Active 🟢): Apply animation presets (such as fade_in, spin, bounce, pulse, typewriter, draw_path) to SVG elements.
