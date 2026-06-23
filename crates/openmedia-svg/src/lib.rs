@@ -3,6 +3,9 @@ use openmedia_core::{Result, SvgOutput, ImageOutput, OpenMediaError};
 use std::collections::HashMap;
 
 pub mod schema;
+pub mod chart;
+
+pub use chart::{create_chart, ChartPoint};
 
 
 #[derive(Debug, Clone)]
