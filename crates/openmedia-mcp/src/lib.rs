@@ -564,6 +564,8 @@ pub struct GenerateMermaidRequest {
     pub code: String,
     /// Theme for the diagram (e.g. default, dark, forest, neutral)
     pub theme: Option<String>,
+    /// Custom theme JSON overrides
+    pub custom_theme: Option<serde_json::Value>,
     /// Target width for rasterized output formats
     pub width: Option<u32>,
     /// Target height for rasterized output formats
@@ -572,6 +574,12 @@ pub struct GenerateMermaidRequest {
     pub background_color: Option<String>,
     /// Output format (svg, png, jpeg, webp). Default is svg.
     pub output_format: Option<String>,
+    /// Node spacing (layout configuration)
+    pub node_spacing: Option<f32>,
+    /// Rank spacing (layout configuration)
+    pub rank_spacing: Option<f32>,
+    /// Preferred aspect ratio (layout configuration)
+    pub preferred_aspect_ratio: Option<f32>,
 }
 
 #[tool_router(server_handler)]
@@ -663,7 +671,30 @@ impl OpenMediaServer {
         
         let _ = std::fs::create_dir_all(&self.config.paths.output_dir);
         
-        let svg_content = openmedia_svg::render_mermaid(&req.code, None, None)
+        // Build layout config
+        let mut layout_config = mermaid_rs_renderer::LayoutConfig::default();
+        if let Some(spacing) = req.node_spacing {
+            layout_config.node_spacing = spacing;
+        }
+        if let Some(spacing) = req.rank_spacing {
+            layout_config.rank_spacing = spacing;
+        }
+        if let Some(ratio) = req.preferred_aspect_ratio {
+            layout_config.preferred_aspect_ratio = Some(ratio);
+        }
+
+        // Resolve theme
+        let mut final_theme = if let Some(ref preset) = req.theme {
+            resolve_theme_preset(preset)
+        } else {
+            mermaid_rs_renderer::Theme::modern()
+        };
+
+        if let Some(ref overrides) = req.custom_theme {
+            override_theme_fields(&mut final_theme, overrides);
+        }
+
+        let svg_content = openmedia_svg::render_mermaid(&req.code, Some(final_theme), Some(layout_config))
             .map_err(|e| format!("Failed to render Mermaid diagram: {}", e))?;
             
         let start_time = std::time::Instant::now();
@@ -2477,6 +2508,39 @@ mod tests {
         assert_eq!(theme.font_size, 20.0);
     }
 
+    #[tokio::test]
+    async fn test_mcp_diagram_generate_mermaid_styling() {
+        let mut config = Config::default();
+        let temp_dir = std::env::temp_dir();
+        config.paths.output_dir = temp_dir.join("openmedia_test_mermaid_styling");
+        let _ = std::fs::create_dir_all(&config.paths.output_dir);
+        let server = OpenMediaServer::new(config).await.unwrap();
+
+        let code = "flowchart LR\n  A --> B".to_string();
+        let params = Parameters(GenerateMermaidRequest {
+            code,
+            theme: Some("forest".to_string()),
+            custom_theme: Some(serde_json::json!({
+                "primary_color": "#aabbcc"
+            })),
+            width: None,
+            height: None,
+            background_color: None,
+            output_format: Some("svg".to_string()),
+            node_spacing: Some(120.0),
+            rank_spacing: Some(140.0),
+            preferred_aspect_ratio: Some(1.77),
+        });
+
+        let result = server.diagram_generate_mermaid(params).await;
+        assert!(result.is_ok());
+        let val = result.unwrap().0;
+        let output: openmedia_core::ImageOutput = serde_json::from_value(val).unwrap();
+        let content = std::fs::read_to_string(&output.path).unwrap();
+        assert!(content.contains("#aabbcc")); // custom theme override was applied
+        let _ = std::fs::remove_file(output.path);
+    }
+
 
     #[tokio::test]
     async fn test_mcp_ping() {
@@ -2567,10 +2631,14 @@ mod tests {
         let params = Parameters(GenerateMermaidRequest {
             code: code.clone(),
             theme: None,
+            custom_theme: None,
             width: None,
             height: None,
             background_color: None,
             output_format: Some("svg".to_string()),
+            node_spacing: None,
+            rank_spacing: None,
+            preferred_aspect_ratio: None,
         });
 
         let result = server.diagram_generate_mermaid(params).await;
@@ -2587,10 +2655,14 @@ mod tests {
         let params_png = Parameters(GenerateMermaidRequest {
             code,
             theme: None,
+            custom_theme: None,
             width: Some(400),
             height: None,
             background_color: Some("#ffffff".to_string()),
             output_format: Some("png".to_string()),
+            node_spacing: None,
+            rank_spacing: None,
+            preferred_aspect_ratio: None,
         });
 
         let result_png = server.diagram_generate_mermaid(params_png).await;
