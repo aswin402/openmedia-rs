@@ -1914,6 +1914,22 @@ impl OpenMediaServer {
                         }],
                     });
                 }
+                let mut transitions = Vec::new();
+                if images.len() > 1 && req.parameters.get("transition_type").is_some() {
+                    let (custom_trans_type, custom_duration, custom_easing) =
+                        parse_transition_params(&req.parameters, openmedia_video::TransitionType::Crossfade);
+
+                    for i in 0..(images.len() - 1) {
+                        transitions.push(openmedia_video::SceneTransition {
+                            from: format!("slide_{}", i),
+                            to: format!("slide_{}", i + 1),
+                            transition_type: custom_trans_type.clone(),
+                            duration: custom_duration,
+                            easing: custom_easing.clone(),
+                        });
+                    }
+                }
+
                 openmedia_video::VideoScene {
                     width,
                     height,
@@ -1921,7 +1937,7 @@ impl OpenMediaServer {
                     duration: images.len() as f64 * duration,
                     background: "#000000".to_string(),
                     scenes,
-                    transitions: vec![],
+                    transitions,
                     audio: parse_audio_config(&req.parameters),
                 }
             }
@@ -2042,6 +2058,9 @@ impl OpenMediaServer {
                     }],
                 });
 
+                let (custom_trans_type, custom_duration, custom_easing) =
+                    parse_transition_params(&req.parameters, openmedia_video::TransitionType::SlideLeft);
+
                 for (i, chart_val) in charts_arr.iter().enumerate() {
                     let chart_type = chart_val["type"].as_str().unwrap_or("bar").to_string();
                     let chart_title = chart_val["title"].as_str().unwrap_or("Statistics").to_string();
@@ -2096,9 +2115,9 @@ impl OpenMediaServer {
                     transitions.push(openmedia_video::SceneTransition {
                         from,
                         to,
-                        transition_type: openmedia_video::TransitionType::Crossfade,
-                        duration: 0.5,
-                        easing: None,
+                        transition_type: custom_trans_type.clone(),
+                        duration: custom_duration,
+                        easing: custom_easing.clone(),
                     });
                 }
 
@@ -2168,6 +2187,9 @@ impl OpenMediaServer {
                         }),
                     }],
                 });
+
+                let (custom_trans_type, custom_duration, custom_easing) =
+                    parse_transition_params(&req.parameters, openmedia_video::TransitionType::SlideUp);
 
                 for (i, content_val) in content_arr.iter().enumerate() {
                     let point_text = content_val.as_str().unwrap_or("").to_string();
@@ -2241,9 +2263,9 @@ impl OpenMediaServer {
                     transitions.push(openmedia_video::SceneTransition {
                         from,
                         to,
-                        transition_type: openmedia_video::TransitionType::SlideUp,
-                        duration: 0.5,
-                        easing: None,
+                        transition_type: custom_trans_type.clone(),
+                        duration: custom_duration,
+                        easing: custom_easing.clone(),
                     });
                 }
 
@@ -2331,6 +2353,9 @@ impl OpenMediaServer {
                     ],
                 });
 
+                let (custom_trans_type, custom_duration, custom_easing) =
+                    parse_transition_params(&req.parameters, openmedia_video::TransitionType::Crossfade);
+
                 for (i, feature_val) in features_arr.iter().enumerate() {
                     let feature_text = feature_val.as_str().unwrap_or("").to_string();
                     let scene_id = format!("scene_{}", i + 1);
@@ -2416,9 +2441,9 @@ impl OpenMediaServer {
                     transitions.push(openmedia_video::SceneTransition {
                         from,
                         to,
-                        transition_type: openmedia_video::TransitionType::Crossfade,
-                        duration: 0.5,
-                        easing: None,
+                        transition_type: custom_trans_type.clone(),
+                        duration: custom_duration,
+                        easing: custom_easing.clone(),
                     });
                 }
 
@@ -3122,6 +3147,33 @@ fn resolve_theme_preset(preset: &str) -> mermaid_rs_renderer::Theme {
         }
         _ => mermaid_rs_renderer::Theme::modern(),
     }
+}
+
+fn parse_transition_params(
+    parameters: &serde_json::Value,
+    default_type: openmedia_video::TransitionType,
+) -> (openmedia_video::TransitionType, f64, Option<String>) {
+    let trans_type = parameters.get("transition_type")
+        .and_then(|v| v.as_str())
+        .map(|s| match s.to_lowercase().as_str() {
+            "crossfade" => openmedia_video::TransitionType::Crossfade,
+            "slide_left" | "slideleft" => openmedia_video::TransitionType::SlideLeft,
+            "slide_right" | "slideright" => openmedia_video::TransitionType::SlideRight,
+            "slide_up" | "slideup" => openmedia_video::TransitionType::SlideUp,
+            "slide_down" | "slidedown" => openmedia_video::TransitionType::SlideDown,
+            _ => default_type.clone(),
+        })
+        .unwrap_or(default_type);
+
+    let duration = parameters.get("transition_duration")
+        .and_then(|v| v.as_f64())
+        .unwrap_or(0.5);
+
+    let easing = parameters.get("transition_easing")
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string());
+
+    (trans_type, duration, easing)
 }
 
 fn parse_audio_config(parameters: &serde_json::Value) -> Option<openmedia_video::AudioConfig> {
@@ -3836,6 +3888,38 @@ mod tests {
         assert!(svg_content.contains("stroke=\"#ff0000\""));
         assert!(svg_content.contains("stroke-width=\"2.5\""));
 
+        let _ = std::fs::remove_file(output.path);
+    }
+
+    #[tokio::test]
+    async fn test_mcp_video_template_with_transition_overrides() {
+        let mut config = Config::default();
+        let temp_dir = std::env::temp_dir();
+        config.paths.output_dir = temp_dir.join("openmedia_test_template_transitions");
+        let _ = std::fs::create_dir_all(&config.paths.output_dir);
+        let server = OpenMediaServer::new(config).await.unwrap();
+
+        let params = Parameters(VideoFromTemplateRequest {
+            template_name: "product_showcase".to_string(),
+            parameters: serde_json::json!({
+                "product_image": "dummy.png",
+                "features": ["Feature A"],
+                "background_color": "#121212",
+                "transition_duration": 1.5,
+                "transition_easing": "ease_in_out",
+                "transition_type": "slide_left",
+                "width": 320,
+                "height": 240,
+                "fps": 5
+            }),
+            output_path: None,
+        });
+
+        let result = server.video_from_template(params).await;
+        assert!(result.is_ok());
+        let val = result.unwrap().0;
+        let output: openmedia_core::VideoSpec = serde_json::from_value(val).unwrap();
+        assert!(output.path.exists());
         let _ = std::fs::remove_file(output.path);
     }
 }
