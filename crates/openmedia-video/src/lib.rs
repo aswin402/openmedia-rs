@@ -28,7 +28,7 @@ pub struct VideoScene {
     pub custom_fonts: Option<Vec<CustomFontSpec>>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Hash, PartialEq, Eq)]
 pub struct CustomFontSpec {
     pub family: String,
     pub src: String,
@@ -348,16 +348,40 @@ impl FrameRenderer for SvgFrameRenderer {
         }
 
         let svg_str = compile_scene_to_svg(scene, time, width, height)?;
-        let mut fontdb = resvg::usvg::fontdb::Database::new();
-        fontdb.load_system_fonts();
-        if let Some(ref fonts) = scene.custom_fonts {
-            let resolved = resolve_custom_fonts(fonts).await;
-            for (_, bytes) in resolved {
-                fontdb.load_font_data(bytes);
+        
+        static USVG_FONTDB_CACHE: std::sync::OnceLock<std::sync::Mutex<std::collections::HashMap<Vec<CustomFontSpec>, std::sync::Arc<resvg::usvg::fontdb::Database>>>> = std::sync::OnceLock::new();
+        let cache = USVG_FONTDB_CACHE.get_or_init(|| std::sync::Mutex::new(std::collections::HashMap::new()));
+        
+        let custom_fonts = scene.custom_fonts.clone().unwrap_or_default();
+        
+        let fontdb_arc = {
+            let mut found = None;
+            if let Ok(guard) = cache.lock() {
+                if let Some(cached_db) = guard.get(&custom_fonts) {
+                    found = Some(cached_db.clone());
+                }
             }
-        }
+            if let Some(db) = found {
+                db
+            } else {
+                let mut fontdb = resvg::usvg::fontdb::Database::new();
+                fontdb.load_system_fonts();
+                if let Some(ref fonts) = scene.custom_fonts {
+                    let resolved = resolve_custom_fonts(fonts).await;
+                    for (_, bytes) in resolved {
+                        fontdb.load_font_data(bytes);
+                    }
+                }
+                let arc_db = std::sync::Arc::new(fontdb);
+                if let Ok(mut guard) = cache.lock() {
+                    guard.insert(custom_fonts, arc_db.clone());
+                }
+                arc_db
+            }
+        };
+
         let mut opt = resvg::usvg::Options::default();
-        opt.fontdb = std::sync::Arc::new(fontdb);
+        opt.fontdb = fontdb_arc;
         let tree = resvg::usvg::Tree::from_str(&svg_str, &opt)
             .map_err(|e| OpenMediaError::InvalidSvgInput(e.to_string()))?;
             
@@ -841,6 +865,38 @@ impl FrameRenderer for BrowserFrameRenderer {
     }
 }
 
+pub async fn get_html_font_css(custom_fonts: &[CustomFontSpec]) -> String {
+    static CSS_CACHE: std::sync::OnceLock<std::sync::Mutex<std::collections::HashMap<Vec<CustomFontSpec>, String>>> = std::sync::OnceLock::new();
+    let cache = CSS_CACHE.get_or_init(|| std::sync::Mutex::new(std::collections::HashMap::new()));
+    
+    if let Ok(guard) = cache.lock() {
+        if let Some(cached_css) = guard.get(custom_fonts) {
+            return cached_css.clone();
+        }
+    }
+
+    let mut font_css = String::new();
+    let resolved = resolve_custom_fonts(custom_fonts).await;
+    for (family, bytes) in resolved {
+        use base64::Engine;
+        let b64 = base64::engine::general_purpose::STANDARD.encode(&bytes);
+        font_css.push_str(&format!(
+            r#"@font-face {{
+                font-family: '{}';
+                src: url('data:font/truetype;charset=utf-8;base64,{}') format('truetype');
+            }}
+            "#,
+            family, b64
+        ));
+    }
+
+    if let Ok(mut guard) = cache.lock() {
+        guard.insert(custom_fonts.to_vec(), font_css.clone());
+    }
+
+    font_css
+}
+
 async fn compile_scene_to_html(scene: &VideoScene, time: f64, width: u32, height: u32) -> Result<String> {
     let mut active_scene = None;
     let mut active_scene_to = None;
@@ -871,22 +927,11 @@ async fn compile_scene_to_html(scene: &VideoScene, time: f64, width: u32, height
         }
     }
 
-    let mut font_css = String::new();
-    if let Some(ref fonts) = scene.custom_fonts {
-        let resolved = resolve_custom_fonts(fonts).await;
-        for (family, bytes) in resolved {
-            use base64::Engine;
-            let b64 = base64::engine::general_purpose::STANDARD.encode(&bytes);
-            font_css.push_str(&format!(
-                r#"@font-face {{
-                    font-family: '{}';
-                    src: url('data:font/truetype;charset=utf-8;base64,{}') format('truetype');
-                }}
-                "#,
-                family, b64
-            ));
-        }
-    }
+    let font_css = if let Some(ref fonts) = scene.custom_fonts {
+        get_html_font_css(fonts).await
+    } else {
+        String::new()
+    };
 
     let bg_color = &scene.background;
     let mut html = format!(
@@ -1351,24 +1396,33 @@ pub fn blend_frames(
 pub async fn resolve_custom_fonts(
     custom_fonts: &[CustomFontSpec],
 ) -> std::collections::HashMap<String, Vec<u8>> {
-    static MEMORY_CACHE: std::sync::OnceLock<std::sync::Mutex<std::collections::HashMap<String, Vec<u8>>>> = std::sync::OnceLock::new();
+    static MEMORY_CACHE: std::sync::OnceLock<std::sync::Mutex<std::collections::HashMap<String, Option<Vec<u8>>>>> = std::sync::OnceLock::new();
     let cache = MEMORY_CACHE.get_or_init(|| std::sync::Mutex::new(std::collections::HashMap::new()));
     
-    let mut resolved = std::collections::HashMap::new();
-    let client = reqwest::Client::new();
+    static HTTP_CLIENT: std::sync::OnceLock<reqwest::Client> = std::sync::OnceLock::new();
+    let client = HTTP_CLIENT.get_or_init(reqwest::Client::new);
     
+    let mut resolved = std::collections::HashMap::new();
     let cache_dir = std::env::temp_dir().join("openmedia_fonts_cache");
     let _ = std::fs::create_dir_all(&cache_dir);
 
     for font in custom_fonts {
         // Check memory cache first
+        let mut cached_entry = None;
         if let Ok(guard) = cache.lock() {
-            if let Some(bytes) = guard.get(&font.src) {
-                resolved.insert(font.family.clone(), bytes.clone());
-                continue;
+            if let Some(opt_bytes) = guard.get(&font.src) {
+                cached_entry = Some(opt_bytes.clone());
             }
         }
 
+        if let Some(opt_bytes) = cached_entry {
+            if let Some(bytes) = opt_bytes {
+                resolved.insert(font.family.clone(), bytes);
+            }
+            continue;
+        }
+
+        // If not in cache, attempt resolution
         let font_bytes = if font.src.starts_with("http://") || font.src.starts_with("https://") {
             use std::collections::hash_map::DefaultHasher;
             use std::hash::{Hash, Hasher};
@@ -1383,7 +1437,13 @@ pub async fn resolve_custom_fonts(
                 if let Ok(resp) = client.get(&font.src).send().await {
                     if let Ok(bytes) = resp.bytes().await {
                         let bytes_vec = bytes.to_vec();
-                        let _ = std::fs::write(&cached_path, &bytes_vec);
+                        let temp_file_name = format!("{}.tmp", uuid::Uuid::new_v4());
+                        let temp_path = cache_dir.join(temp_file_name);
+                        if std::fs::write(&temp_path, &bytes_vec).is_ok() {
+                            if std::fs::rename(&temp_path, &cached_path).is_err() {
+                                let _ = std::fs::remove_file(&temp_path);
+                            }
+                        }
                         Some(bytes_vec)
                     } else {
                         None
@@ -1396,11 +1456,12 @@ pub async fn resolve_custom_fonts(
             std::fs::read(&font.src).ok()
         };
 
+        // Cache the result (Some(bytes) if resolution succeeded, None if it failed)
+        if let Ok(mut guard) = cache.lock() {
+            guard.insert(font.src.clone(), font_bytes.clone());
+        }
+
         if let Some(bytes) = font_bytes {
-            // Put in memory cache
-            if let Ok(mut guard) = cache.lock() {
-                guard.insert(font.src.clone(), bytes.clone());
-            }
             resolved.insert(font.family.clone(), bytes);
         }
     }
@@ -1705,5 +1766,56 @@ mod tests {
         // Second call should retrieve from cache
         let resolved_again = resolve_custom_fonts(&[spec]).await;
         assert_eq!(resolved_again.get("CachedFont"), Some(&expected_bytes));
+    }
+
+    #[tokio::test]
+    async fn test_custom_font_failed_caching() {
+        let temp_dir = std::env::temp_dir();
+        let font_file = temp_dir.join("failed_font.ttf");
+        let _ = std::fs::remove_file(&font_file); // Ensure it doesn't exist
+
+        let spec = CustomFontSpec {
+            family: "FailedFont".to_string(),
+            src: font_file.to_string_lossy().to_string(),
+        };
+
+        // First call fails to load (file doesn't exist), should not be in resolved map
+        let resolved = resolve_custom_fonts(&[spec.clone()]).await;
+        assert!(resolved.get("FailedFont").is_none());
+
+        // Now create the file
+        let expected_bytes = vec![9, 10, 11, 12];
+        std::fs::write(&font_file, &expected_bytes).unwrap();
+
+        // Second call should still fail/be skipped because it cached None
+        let resolved_again = resolve_custom_fonts(&[spec]).await;
+        assert!(resolved_again.get("FailedFont").is_none());
+
+        let _ = std::fs::remove_file(&font_file);
+    }
+
+    #[tokio::test]
+    async fn test_get_html_font_css_cache() {
+        let temp_dir = std::env::temp_dir();
+        let font_file = temp_dir.join("css_cache_font.ttf");
+        let expected_bytes = vec![13, 14, 15, 16];
+        std::fs::write(&font_file, &expected_bytes).unwrap();
+
+        let spec = CustomFontSpec {
+            family: "CssFont".to_string(),
+            src: font_file.to_string_lossy().to_string(),
+        };
+
+        // Get CSS
+        let css1 = get_html_font_css(&[spec.clone()]).await;
+        assert!(css1.contains("font-family: 'CssFont';"));
+        assert!(css1.contains("url('data:font/truetype;charset=utf-8;base64,"));
+
+        // Delete file
+        let _ = std::fs::remove_file(&font_file);
+
+        // Get CSS again, should be a cache hit
+        let css2 = get_html_font_css(&[spec]).await;
+        assert_eq!(css1, css2);
     }
 }

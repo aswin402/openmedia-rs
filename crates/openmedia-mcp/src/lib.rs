@@ -1698,6 +1698,7 @@ impl OpenMediaServer {
             scenes,
             transitions,
             audio,
+            custom_fonts: None,
         };
 
         let output_path = if let Some(out_p) = req.output_path {
@@ -1939,6 +1940,7 @@ impl OpenMediaServer {
                     scenes,
                     transitions,
                     audio: parse_audio_config(&req.parameters),
+                    custom_fonts: None,
                 }
             }
             "text_explainer" => {
@@ -2020,6 +2022,7 @@ impl OpenMediaServer {
                     scenes,
                     transitions: vec![],
                     audio: parse_audio_config(&req.parameters),
+                    custom_fonts: None,
                 }
             }
             "data_dashboard" => {
@@ -2132,6 +2135,7 @@ impl OpenMediaServer {
                     scenes,
                     transitions,
                     audio: parse_audio_config(&req.parameters),
+                    custom_fonts: None,
                 }
             }
             "social_media" => {
@@ -2280,6 +2284,7 @@ impl OpenMediaServer {
                     scenes,
                     transitions,
                     audio: parse_audio_config(&req.parameters),
+                    custom_fonts: None,
                 }
             }
             "product_showcase" => {
@@ -2458,6 +2463,7 @@ impl OpenMediaServer {
                     scenes,
                     transitions,
                     audio: parse_audio_config(&req.parameters),
+                    custom_fonts: None,
                 }
             }
             _ => {
@@ -2496,6 +2502,7 @@ impl OpenMediaServer {
                     }],
                     transitions: vec![],
                     audio: parse_audio_config(&req.parameters),
+                    custom_fonts: None,
                 }
             }
         };
