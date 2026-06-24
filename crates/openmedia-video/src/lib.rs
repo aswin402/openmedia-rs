@@ -24,6 +24,14 @@ pub struct VideoScene {
     pub transitions: Vec<SceneTransition>,
     /// Audio tracks
     pub audio: Option<AudioConfig>,
+    /// Custom fonts to load
+    pub custom_fonts: Option<Vec<CustomFontSpec>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CustomFontSpec {
+    pub family: String,
+    pub src: String,
 }
 
 /// A single scene within a video

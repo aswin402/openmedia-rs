@@ -3401,6 +3401,7 @@ name = "openmedia-video"
 version = "0.0.12"
 dependencies = [
  "async-trait",
+ "base64",
  "chromiumoxide",
  "futures",
  "image",
@@ -3408,6 +3409,7 @@ dependencies = [
  "openmedia-core",
  "openmedia-process",
  "openmedia-svg",
+ "reqwest",
  "resvg 0.44.0",
  "serde",
  "serde_json",
