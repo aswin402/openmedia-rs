@@ -348,7 +348,16 @@ impl FrameRenderer for SvgFrameRenderer {
         }
 
         let svg_str = compile_scene_to_svg(scene, time, width, height)?;
-        let opt = resvg::usvg::Options::default();
+        let mut fontdb = resvg::usvg::fontdb::Database::new();
+        fontdb.load_system_fonts();
+        if let Some(ref fonts) = scene.custom_fonts {
+            let resolved = resolve_custom_fonts(fonts).await;
+            for (_, bytes) in resolved {
+                fontdb.load_font_data(bytes);
+            }
+        }
+        let mut opt = resvg::usvg::Options::default();
+        opt.fontdb = std::sync::Arc::new(fontdb);
         let tree = resvg::usvg::Tree::from_str(&svg_str, &opt)
             .map_err(|e| OpenMediaError::InvalidSvgInput(e.to_string()))?;
             
@@ -793,7 +802,7 @@ impl FrameRenderer for BrowserFrameRenderer {
         width: u32,
         height: u32,
     ) -> Result<image::RgbaImage> {
-        let html_content = compile_scene_to_html(scene, time, width, height)?;
+        let html_content = compile_scene_to_html(scene, time, width, height).await?;
         
         let page = self.browser.new_page("about:blank").await
             .map_err(|e| OpenMediaError::Internal(e.to_string()))?;
@@ -832,7 +841,7 @@ impl FrameRenderer for BrowserFrameRenderer {
     }
 }
 
-fn compile_scene_to_html(scene: &VideoScene, time: f64, width: u32, height: u32) -> Result<String> {
+async fn compile_scene_to_html(scene: &VideoScene, time: f64, width: u32, height: u32) -> Result<String> {
     let mut active_scene = None;
     let mut active_scene_to = None;
     let mut transition_progress = 0.0;
@@ -862,12 +871,30 @@ fn compile_scene_to_html(scene: &VideoScene, time: f64, width: u32, height: u32)
         }
     }
 
+    let mut font_css = String::new();
+    if let Some(ref fonts) = scene.custom_fonts {
+        let resolved = resolve_custom_fonts(fonts).await;
+        for (family, bytes) in resolved {
+            use base64::Engine;
+            let b64 = base64::engine::general_purpose::STANDARD.encode(&bytes);
+            font_css.push_str(&format!(
+                r#"@font-face {{
+                    font-family: '{}';
+                    src: url('data:font/truetype;charset=utf-8;base64,{}') format('truetype');
+                }}
+                "#,
+                family, b64
+            ));
+        }
+    }
+
     let bg_color = &scene.background;
     let mut html = format!(
         r#"<!DOCTYPE html>
 <html>
 <head>
 <style>
+  {}
   body {{
     margin: 0;
     padding: 0;
@@ -886,6 +913,7 @@ fn compile_scene_to_html(scene: &VideoScene, time: f64, width: u32, height: u32)
 </style>
 </head>
 <body>"#,
+        font_css,
         width, height, bg_color
     );
 
@@ -1320,6 +1348,65 @@ pub fn blend_frames(
     out
 }
 
+pub async fn resolve_custom_fonts(
+    custom_fonts: &[CustomFontSpec],
+) -> std::collections::HashMap<String, Vec<u8>> {
+    static MEMORY_CACHE: std::sync::OnceLock<std::sync::Mutex<std::collections::HashMap<String, Vec<u8>>>> = std::sync::OnceLock::new();
+    let cache = MEMORY_CACHE.get_or_init(|| std::sync::Mutex::new(std::collections::HashMap::new()));
+    
+    let mut resolved = std::collections::HashMap::new();
+    let client = reqwest::Client::new();
+    
+    let cache_dir = std::env::temp_dir().join("openmedia_fonts_cache");
+    let _ = std::fs::create_dir_all(&cache_dir);
+
+    for font in custom_fonts {
+        // Check memory cache first
+        if let Ok(guard) = cache.lock() {
+            if let Some(bytes) = guard.get(&font.src) {
+                resolved.insert(font.family.clone(), bytes.clone());
+                continue;
+            }
+        }
+
+        let font_bytes = if font.src.starts_with("http://") || font.src.starts_with("https://") {
+            use std::collections::hash_map::DefaultHasher;
+            use std::hash::{Hash, Hasher};
+            let mut hasher = DefaultHasher::new();
+            font.src.hash(&mut hasher);
+            let hash_val = hasher.finish();
+            let cached_path = cache_dir.join(format!("{}.ttf", hash_val));
+
+            if cached_path.exists() {
+                std::fs::read(&cached_path).ok()
+            } else {
+                if let Ok(resp) = client.get(&font.src).send().await {
+                    if let Ok(bytes) = resp.bytes().await {
+                        let bytes_vec = bytes.to_vec();
+                        let _ = std::fs::write(&cached_path, &bytes_vec);
+                        Some(bytes_vec)
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                }
+            }
+        } else {
+            std::fs::read(&font.src).ok()
+        };
+
+        if let Some(bytes) = font_bytes {
+            // Put in memory cache
+            if let Ok(mut guard) = cache.lock() {
+                guard.insert(font.src.clone(), bytes.clone());
+            }
+            resolved.insert(font.family.clone(), bytes);
+        }
+    }
+    resolved
+}
+
 pub async fn render_video_scene(
     scene: &VideoScene,
     output_path: &Path,
@@ -1576,5 +1663,47 @@ mod tests {
         assert_eq!(apply_transition_easing(0.5, Some("ease-out ")), 0.75);
         assert_eq!(apply_transition_easing(0.25, Some("EASE_IN_OUT")), 0.125);
         assert_eq!(apply_transition_easing(0.75, Some("ease_in_out")), 0.875);
+    }
+
+    #[tokio::test]
+    async fn test_custom_font_resolution_local() {
+        let temp_dir = std::env::temp_dir();
+        let font_file = temp_dir.join("test_font.ttf");
+        let expected_bytes = vec![1, 2, 3, 4];
+        std::fs::write(&font_file, &expected_bytes).unwrap();
+
+        let spec = CustomFontSpec {
+            family: "TestFont".to_string(),
+            src: font_file.to_string_lossy().to_string(),
+        };
+
+        let resolved = resolve_custom_fonts(&[spec]).await;
+        assert_eq!(resolved.get("TestFont"), Some(&expected_bytes));
+
+        let _ = std::fs::remove_file(font_file);
+    }
+
+    #[tokio::test]
+    async fn test_custom_font_resolution_memory_cache() {
+        let temp_dir = std::env::temp_dir();
+        let font_file = temp_dir.join("test_font_cache.ttf");
+        let expected_bytes = vec![5, 6, 7, 8];
+        std::fs::write(&font_file, &expected_bytes).unwrap();
+
+        let spec = CustomFontSpec {
+            family: "CachedFont".to_string(),
+            src: font_file.to_string_lossy().to_string(),
+        };
+
+        // First call loads from file and caches it
+        let resolved = resolve_custom_fonts(&[spec.clone()]).await;
+        assert_eq!(resolved.get("CachedFont"), Some(&expected_bytes));
+
+        // Delete the file to ensure subsequent reads come from the memory cache
+        let _ = std::fs::remove_file(&font_file);
+
+        // Second call should retrieve from cache
+        let resolved_again = resolve_custom_fonts(&[spec]).await;
+        assert_eq!(resolved_again.get("CachedFont"), Some(&expected_bytes));
     }
 }
