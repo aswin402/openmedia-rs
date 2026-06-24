@@ -3248,9 +3248,13 @@ mod tests {
     async fn test_mcp_video_template_with_custom_font() {
         let mut config = Config::default();
         let temp_dir = std::env::temp_dir();
-        config.paths.output_dir = temp_dir.join("openmedia_test_template_fonts");
-        let _ = std::fs::create_dir_all(&config.paths.output_dir);
+        let output_dir = temp_dir.join("openmedia_test_template_fonts");
+        config.paths.output_dir = output_dir.clone();
+        let _ = std::fs::create_dir_all(&output_dir);
         let server = OpenMediaServer::new(config).await.unwrap();
+
+        let mock_font_path = output_dir.join("mock_font.ttf");
+        std::fs::write(&mock_font_path, b"mock font data").unwrap();
 
         let params = Parameters(VideoFromTemplateRequest {
             template_name: "slideshow".to_string(),
@@ -3260,7 +3264,7 @@ mod tests {
                 "custom_fonts": [
                     {
                         "family": "GoogleRoboto",
-                        "src": "https://github.com/google/fonts/raw/main/ofl/roboto/Roboto-Regular.ttf"
+                        "src": mock_font_path.to_string_lossy().to_string()
                     }
                 ],
                 "width": 320,
@@ -3275,7 +3279,8 @@ mod tests {
         let val = result.unwrap().0;
         let output: openmedia_core::VideoSpec = serde_json::from_value(val).unwrap();
         assert!(output.path.exists());
-        let _ = std::fs::remove_file(output.path);
+
+        let _ = std::fs::remove_dir_all(&output_dir);
     }
 
     #[test]
