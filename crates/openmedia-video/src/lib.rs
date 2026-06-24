@@ -320,7 +320,7 @@ impl FrameRenderer for SvgFrameRenderer {
         }
 
         if let Some((from_s, to_s, trans_start, trans)) = active_trans {
-            let progress = (time - trans_start) / trans.duration;
+            let progress = apply_transition_easing((time - trans_start) / trans.duration, &trans.easing);
             
             let mut from_scene = scene.clone();
             from_scene.scenes = vec![from_s.clone()];
@@ -839,7 +839,7 @@ fn compile_scene_to_html(scene: &VideoScene, time: f64, width: u32, height: u32)
             if time >= trans_start && time <= from_s.end {
                 active_scene = Some(from_s);
                 active_scene_to = scene.scenes.iter().find(|s| s.id == trans.to);
-                transition_progress = (time - trans_start) / trans.duration;
+                transition_progress = apply_transition_easing((time - trans_start) / trans.duration, &trans.easing);
                 active_transition = Some(trans);
                 break;
             }
@@ -1158,6 +1158,25 @@ fn render_scene_elements_to_html(s: &Scene, t: f64, width: u32, height: u32) -> 
         }
     }
     Ok(elements_html)
+}
+
+pub fn apply_transition_easing(progress: f64, easing: &Option<String>) -> f64 {
+    if let Some(ref eas) = easing {
+        match eas.to_lowercase().as_str() {
+            "ease_in" | "ease-in" => progress * progress,
+            "ease_out" | "ease-out" => progress * (2.0 - progress),
+            "ease_in_out" | "ease-in-out" => {
+                if progress < 0.5 {
+                    2.0 * progress * progress
+                } else {
+                    -1.0 + (4.0 - 2.0 * progress) * progress
+                }
+            }
+            _ => progress,
+        }
+    } else {
+        progress
+    }
 }
 
 // === Unified Video compiler and renderer ===
@@ -1525,4 +1544,23 @@ pub async fn html_to_image(
         backend_used: "chromiumoxide".to_string(),
         generation_time,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_transition_easing_calculations() {
+        let easing_none = None;
+        let easing_in = Some("ease_in".to_string());
+        let easing_out = Some("ease_out".to_string());
+        let easing_in_out = Some("ease_in_out".to_string());
+
+        assert_eq!(apply_transition_easing(0.5, &easing_none), 0.5);
+        assert_eq!(apply_transition_easing(0.5, &easing_in), 0.25);
+        assert_eq!(apply_transition_easing(0.5, &easing_out), 0.75);
+        assert_eq!(apply_transition_easing(0.25, &easing_in_out), 0.125);
+        assert_eq!(apply_transition_easing(0.75, &easing_in_out), 0.875);
+    }
 }
