@@ -364,8 +364,13 @@ impl FrameRenderer for SvgFrameRenderer {
             if let Some(db) = found {
                 db
             } else {
-                let mut fontdb = resvg::usvg::fontdb::Database::new();
-                fontdb.load_system_fonts();
+                static BASE_SYSTEM_FONTS: std::sync::OnceLock<resvg::usvg::fontdb::Database> = std::sync::OnceLock::new();
+                let base_db = BASE_SYSTEM_FONTS.get_or_init(|| {
+                    let mut db = resvg::usvg::fontdb::Database::new();
+                    db.load_system_fonts();
+                    db
+                });
+                let mut fontdb = base_db.clone();
                 if let Some(ref fonts) = scene.custom_fonts {
                     let resolved = resolve_custom_fonts(fonts).await;
                     for (_, bytes) in resolved {
@@ -1393,32 +1398,56 @@ pub fn blend_frames(
     out
 }
 
+#[derive(Clone)]
+enum CacheEntry {
+    Success(Vec<u8>),
+    Failure(std::time::Instant),
+}
+
 pub async fn resolve_custom_fonts(
     custom_fonts: &[CustomFontSpec],
 ) -> std::collections::HashMap<String, Vec<u8>> {
-    static MEMORY_CACHE: std::sync::OnceLock<std::sync::Mutex<std::collections::HashMap<String, Option<Vec<u8>>>>> = std::sync::OnceLock::new();
+    static MEMORY_CACHE: std::sync::OnceLock<std::sync::Mutex<std::collections::HashMap<String, CacheEntry>>> = std::sync::OnceLock::new();
     let cache = MEMORY_CACHE.get_or_init(|| std::sync::Mutex::new(std::collections::HashMap::new()));
     
     static HTTP_CLIENT: std::sync::OnceLock<reqwest::Client> = std::sync::OnceLock::new();
-    let client = HTTP_CLIENT.get_or_init(reqwest::Client::new);
+    let client = HTTP_CLIENT.get_or_init(|| {
+        reqwest::Client::builder()
+            .connect_timeout(std::time::Duration::from_secs(5))
+            .timeout(std::time::Duration::from_secs(15))
+            .build()
+            .unwrap_or_default()
+    });
     
     let mut resolved = std::collections::HashMap::new();
     let cache_dir = std::env::temp_dir().join("openmedia_fonts_cache");
-    let _ = std::fs::create_dir_all(&cache_dir);
+    let _ = tokio::fs::create_dir_all(&cache_dir).await;
 
     for font in custom_fonts {
         // Check memory cache first
-        let mut cached_entry = None;
+        let mut cached_bytes = None;
+        let mut is_cached_failure = false;
+        
         if let Ok(guard) = cache.lock() {
-            if let Some(opt_bytes) = guard.get(&font.src) {
-                cached_entry = Some(opt_bytes.clone());
+            if let Some(entry) = guard.get(&font.src) {
+                match entry {
+                    CacheEntry::Success(bytes) => {
+                        cached_bytes = Some(bytes.clone());
+                    }
+                    CacheEntry::Failure(instant) => {
+                        if instant.elapsed() <= std::time::Duration::from_secs(60) {
+                            is_cached_failure = true;
+                        }
+                    }
+                }
             }
         }
 
-        if let Some(opt_bytes) = cached_entry {
-            if let Some(bytes) = opt_bytes {
-                resolved.insert(font.family.clone(), bytes);
-            }
+        if let Some(bytes) = cached_bytes {
+            resolved.insert(font.family.clone(), bytes);
+            continue;
+        }
+        if is_cached_failure {
             continue;
         }
 
@@ -1431,17 +1460,17 @@ pub async fn resolve_custom_fonts(
             let hash_val = hasher.finish();
             let cached_path = cache_dir.join(format!("{}.ttf", hash_val));
 
-            if cached_path.exists() {
-                std::fs::read(&cached_path).ok()
+            if tokio::fs::metadata(&cached_path).await.is_ok() {
+                tokio::fs::read(&cached_path).await.ok()
             } else {
                 if let Ok(resp) = client.get(&font.src).send().await {
                     if let Ok(bytes) = resp.bytes().await {
                         let bytes_vec = bytes.to_vec();
                         let temp_file_name = format!("{}.tmp", uuid::Uuid::new_v4());
                         let temp_path = cache_dir.join(temp_file_name);
-                        if std::fs::write(&temp_path, &bytes_vec).is_ok() {
-                            if std::fs::rename(&temp_path, &cached_path).is_err() {
-                                let _ = std::fs::remove_file(&temp_path);
+                        if tokio::fs::write(&temp_path, &bytes_vec).await.is_ok() {
+                            if tokio::fs::rename(&temp_path, &cached_path).await.is_err() {
+                                let _ = tokio::fs::remove_file(&temp_path).await;
                             }
                         }
                         Some(bytes_vec)
@@ -1453,12 +1482,16 @@ pub async fn resolve_custom_fonts(
                 }
             }
         } else {
-            std::fs::read(&font.src).ok()
+            tokio::fs::read(&font.src).await.ok()
         };
 
-        // Cache the result (Some(bytes) if resolution succeeded, None if it failed)
+        // Cache the result (Some(bytes) if resolution succeeded, Failure if it failed)
         if let Ok(mut guard) = cache.lock() {
-            guard.insert(font.src.clone(), font_bytes.clone());
+            let entry = match &font_bytes {
+                Some(bytes) => CacheEntry::Success(bytes.clone()),
+                None => CacheEntry::Failure(std::time::Instant::now()),
+            };
+            guard.insert(font.src.clone(), entry);
         }
 
         if let Some(bytes) = font_bytes {
