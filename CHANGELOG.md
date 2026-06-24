@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v0.0.13] - 2026-06-25
+
+### Added
+- **Custom Transition Easing & Duration Overrides**: Extended the transition engine to support customizable easing overrides (`linear`, `ease_in`, `ease_out`, `ease_in_out`, and case-insensitive matching). Allowed overriding default durations and easing in templates via JSON parameters (`transition_type`, `transition_duration`, `transition_easing`).
+- **Dynamic Font Loading & SVG Integration**: Added support for loading local `.ttf`/`.otf` files and downloading remote fonts. Configured `resvg`'s `fontdb` database dynamically in the frame rendering pipeline.
+- **High-Performance Font Caching**: Designed thread-safe caches for system font databases, HTML base64 CSS declarations, and transient download failures (with 60s TTL) to maximize video rendering frame rates.
+- **Atomic Disk Writing**: Implemented UUID-based temporary file writing followed by atomic file renaming (`std::fs::rename`) to guarantee filesystem cache integrity.
+- **Offline-Safe Tests**: Refactored video template integration tests to dynamically generate local mock font files, resolving external HTTP dependencies.
+
 ## [v0.0.12] - 2026-06-24
 
 ### Added
