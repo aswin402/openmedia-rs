@@ -1940,7 +1940,7 @@ impl OpenMediaServer {
                     scenes,
                     transitions,
                     audio: parse_audio_config(&req.parameters),
-                    custom_fonts: None,
+                    custom_fonts: parse_custom_fonts(&req.parameters),
                 }
             }
             "text_explainer" => {
@@ -2022,7 +2022,7 @@ impl OpenMediaServer {
                     scenes,
                     transitions: vec![],
                     audio: parse_audio_config(&req.parameters),
-                    custom_fonts: None,
+                    custom_fonts: parse_custom_fonts(&req.parameters),
                 }
             }
             "data_dashboard" => {
@@ -2135,7 +2135,7 @@ impl OpenMediaServer {
                     scenes,
                     transitions,
                     audio: parse_audio_config(&req.parameters),
-                    custom_fonts: None,
+                    custom_fonts: parse_custom_fonts(&req.parameters),
                 }
             }
             "social_media" => {
@@ -2284,7 +2284,7 @@ impl OpenMediaServer {
                     scenes,
                     transitions,
                     audio: parse_audio_config(&req.parameters),
-                    custom_fonts: None,
+                    custom_fonts: parse_custom_fonts(&req.parameters),
                 }
             }
             "product_showcase" => {
@@ -2463,7 +2463,7 @@ impl OpenMediaServer {
                     scenes,
                     transitions,
                     audio: parse_audio_config(&req.parameters),
-                    custom_fonts: None,
+                    custom_fonts: parse_custom_fonts(&req.parameters),
                 }
             }
             _ => {
@@ -2502,7 +2502,7 @@ impl OpenMediaServer {
                     }],
                     transitions: vec![],
                     audio: parse_audio_config(&req.parameters),
-                    custom_fonts: None,
+                    custom_fonts: parse_custom_fonts(&req.parameters),
                 }
             }
         };
@@ -3219,9 +3219,64 @@ fn parse_audio_config(parameters: &serde_json::Value) -> Option<openmedia_video:
     None
 }
 
+fn parse_custom_fonts(parameters: &serde_json::Value) -> Option<Vec<openmedia_video::CustomFontSpec>> {
+    if let Some(fonts_arr) = parameters.get("custom_fonts").and_then(|v| v.as_array()) {
+        let mut specs = Vec::new();
+        for font_val in fonts_arr {
+            if let (Some(family), Some(src)) = (
+                font_val.get("family").and_then(|v| v.as_str()),
+                font_val.get("src").and_then(|v| v.as_str())
+            ) {
+                specs.push(openmedia_video::CustomFontSpec {
+                    family: family.to_string(),
+                    src: src.to_string(),
+                });
+            }
+        }
+        if !specs.is_empty() {
+            return Some(specs);
+        }
+    }
+    None
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[tokio::test]
+    async fn test_mcp_video_template_with_custom_font() {
+        let mut config = Config::default();
+        let temp_dir = std::env::temp_dir();
+        config.paths.output_dir = temp_dir.join("openmedia_test_template_fonts");
+        let _ = std::fs::create_dir_all(&config.paths.output_dir);
+        let server = OpenMediaServer::new(config).await.unwrap();
+
+        let params = Parameters(VideoFromTemplateRequest {
+            template_name: "slideshow".to_string(),
+            parameters: serde_json::json!({
+                "images": ["dummy.png"],
+                "duration_per_image": 1.0,
+                "custom_fonts": [
+                    {
+                        "family": "GoogleRoboto",
+                        "src": "https://github.com/google/fonts/raw/main/ofl/roboto/Roboto-Regular.ttf"
+                    }
+                ],
+                "width": 320,
+                "height": 240,
+                "fps": 5
+            }),
+            output_path: None,
+        });
+
+        let result = server.video_from_template(params).await;
+        assert!(result.is_ok());
+        let val = result.unwrap().0;
+        let output: openmedia_core::VideoSpec = serde_json::from_value(val).unwrap();
+        assert!(output.path.exists());
+        let _ = std::fs::remove_file(output.path);
+    }
 
     #[test]
     fn test_theme_preset_override() {
