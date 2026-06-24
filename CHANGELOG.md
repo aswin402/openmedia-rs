@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v0.0.12] - 2026-06-24
+
+### Added
+- **Audio Overlays in Video Templates**: Enabled mixing of multi-track audio configs or background music in the `video_from_template` tool.
+- **Audio Config Parsing**: Added robust parsing for `"background_music"` (simple string path) and `"audio_tracks"` (complex structures containing volume, offset/start, and fade-in/fade-out parameters) directly from template parameters.
+- **FFmpeg Error Diagnosis**: Enhanced FFmpeg audio mixing subprocess execution to capture stdout/stderr and explicitly return error status codes instead of failing silently.
+- **Verification Tests**: Added integration test `test_mcp_video_template_with_audio` generating dynamic WAV files to verify audio mixing compilation logic.
+
 ## [v0.0.11] - 2026-06-23
 
 ### Added

@@ -17,7 +17,8 @@ The inspiration for OpenMedia-RS comes from:
 
 ---
 
-## ⚡ What We Have Done (v0.0.11 Pre-Designed Video Templates)
+## ⚡ What We Have Done (v0.0.12 Audio Overlays for Video Templates)
+* **Audio Overlays in Video Templates (`video_from_template`)**: Integrated custom audio overlay configuration, supporting `"background_music"` (simple path shorthand) and `"audio_tracks"` (complex multi-track array with volume control, offsets, and fade effects) mixed natively during compilation.
 * **Pre-Designed Video Templates (`video_from_template`)**: Implemented matching and scene composition engines for `data_dashboard` (statistical charts, dark-themed title slides), `social_media` (vertical 9:16 layout format with slide-up content keyframes), and `product_showcase` (multi-scene image showcase with fade/slide animation timelines) templates.
 * **Custom Mermaid Styling & Theme Overrides (`diagram_generate_mermaid`)**: Extended the Mermaid diagram generator to support theme presets (`default`, `dark`, `forest`, `neutral`), custom layout spacing configurations, and custom JSON field styling overrides.
 * **Refined Lightweight Architecture**: Re-scoped the project to focus on a strictly lightweight vector rendering, diagram compilation, and layout animation engine (< 50MB RAM/ROM footprint). Bypassed heavy local AI diffusion models in favor of online LLM/multimodal agents acting as the visual code designers.
@@ -79,7 +80,7 @@ OpenMedia-RS exposes the following Model Context Protocol (MCP) tools directly t
 * **`video_create_slideshow`** (Active 🟢): Compiles an image sequence with transitions (crossfade, slide, wipe) and mixes background audio.
 * **`video_add_transition`** (Active 🟢): Adds scene transitions inside the DSL description.
 * **`video_add_audio`** (Active 🟢): Fuses audio tracks into existing video containers or JSON descriptions.
-* **`video_from_template`** (Active 🟢): Instantiates videos from prebuilt templates.
+* **`video_from_template`** (Active 🟢): Instantiates videos from prebuilt templates (supports `"background_music"` and `"audio_tracks"` overlays mixing).
 * **`video_extract_frames`** (Active 🟢): Extracts keyframe images from a video at specific time offsets.
 * **`video_trim`** (Active 🟢): Trims a video file to a specific time range.
 
