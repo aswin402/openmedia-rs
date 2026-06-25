@@ -4,8 +4,10 @@ use futures::StreamExt;
 #[tokio::main]
 async fn main() {
     println!("Building BrowserConfig...");
+    let profile_dir = std::env::temp_dir().join(format!("chrome-profile-{}", uuid::Uuid::new_v4()));
     let config = BrowserConfig::builder()
         .no_sandbox()
+        .user_data_dir(profile_dir)
         .build()
         .unwrap();
 

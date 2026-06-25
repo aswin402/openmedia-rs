@@ -97,6 +97,26 @@ The inspiration for OpenMedia-RS comes from:
 
 ---
 
+## 🖼️ Render Showcase
+
+Here are the sample media assets generated natively, offline, and entirely in Rust using the OpenMedia-RS engine.
+
+| Asset | Preview | Description |
+| :--- | :--- | :--- |
+| **Mockup Card (PNG)** | <img src="assets/sample_image.png" alt="Mockup Card PNG" width="300" /> | High-performance CPU-rasterized PNG from an SVG template. |
+| **Mockup Card (SVG)** | <img src="assets/sample_diagram.svg" alt="Mockup Card SVG" width="300" /> | Clean vector SVG mockup graphic generated via the JSON Canvas API. |
+| **Animated SVG** | <img src="assets/sample_animation.svg" alt="Animated SVG" width="150" /> | Vector graphic containing native SMIL rotation and pulsing animations. |
+| **Data Chart** | <img src="assets/sample_chart.svg" alt="Radar Chart" width="250" /> | Radar spiderweb chart plotted from raw JSON data. |
+| **Mermaid Flowchart** | <img src="assets/sample_mermaid.svg" alt="Flowchart Diagram" width="300" /> | Flowchart diagram compiled from Mermaid syntax offline on the CPU. |
+
+### 🎥 Promotional Videos
+
+We have generated high-quality cinematic advertisement videos to showcase the layout composition and transitions blending:
+- **[openmedia_promo.mp4](openmedia_promo.mp4)**: The official 30-second cinematic launch trailer demonstrating Blur, Glitch, and Radial Wipe transition blends.
+- **[openmedia_sample.mp4](openmedia_sample.mp4)**: A feature-showcase demonstration video showing off SaaS UI layouts.
+
+---
+
 ## 🚀 What It Will Do (Features & Tools)
 
 OpenMedia-RS exposes the following Model Context Protocol (MCP) tools directly to AI coding agents:

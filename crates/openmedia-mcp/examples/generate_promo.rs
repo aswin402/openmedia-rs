@@ -23,13 +23,13 @@ async fn main() {
   <canvas id="canvas1" width="1280" height="720" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;"></canvas>
   
   <style>
-    @keyframes screen-shake {
-      0%, 100% { transform: translate(-50%, -50%) translate(0, 0); }
-      10% { transform: translate(-50%, -50%) translate(-6px, 4px) rotate(-0.5deg); }
-      30% { transform: translate(-50%, -50%) translate(5px, -5px) rotate(0.5deg); }
-      50% { transform: translate(-50%, -50%) translate(-4px, 6px) rotate(-1deg); }
-      70% { transform: translate(-50%, -50%) translate(6px, 4px) rotate(1deg); }
-      90% { transform: translate(-50%, -50%) translate(-5px, -4px) rotate(-0.5deg); }
+    @keyframes local-shake {
+      0%, 100% { transform: translate(0, 0); }
+      10% { transform: translate(-5px, 3px) rotate(-0.5deg); }
+      30% { transform: translate(4px, -4px) rotate(0.5deg); }
+      50% { transform: translate(-3px, 5px) rotate(-1deg); }
+      70% { transform: translate(5px, 3px) rotate(1deg); }
+      90% { transform: translate(-4px, -3px) rotate(-0.5deg); }
     }
     .glitch-title {
       font-size: 80px;
@@ -38,7 +38,8 @@ async fn main() {
       text-shadow: 0 0 20px rgba(239, 68, 68, 0.7);
       letter-spacing: 6px;
       margin: 0;
-      animation: screen-shake 0.1s infinite;
+      display: inline-block;
+      animation: local-shake 0.12s infinite;
     }
     .scanlines {
       position: absolute;
@@ -46,7 +47,7 @@ async fn main() {
       left: 0;
       width: 100%;
       height: 100%;
-      background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+      background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 255, 0, 0.06));
       background-size: 100% 4px, 6px 100%;
       z-index: 20;
       pointer-events: none;
@@ -328,7 +329,7 @@ async fn main() {
       align-items: center;
       padding: 30px 20px;
       box-sizing: border-box;
-      box-shadow: 0 15px 35px rgba(0,0,0,0.4), inset 0 0 15px rgba(255,255,255,0.03);
+      box-shadow: 0 15px 35px rgba(0,0,0,0.4), inset 0 0 15px rgba(255, 255, 255, 0.03);
       z-index: 10;
       transition: all 0.3s ease;
     }
@@ -355,32 +356,32 @@ async fn main() {
     }
   </style>
 
-  <!-- Floating tool cards -->
-  <div class="glass-card" id="card-0" style="left: 70px; top: 220px; border-color: rgba(59, 130, 246, 0.2);">
+  <!-- Floating tool cards symmetrically spaced -->
+  <div class="glass-card" id="card-0" style="left: 55px; top: 220px; border-color: rgba(59, 130, 246, 0.25);">
     <div class="card-title">generate_image</div>
     <div class="card-icon">🎨</div>
     <div class="card-desc">AI Image synthesis, inpainting, and upscaling models.</div>
   </div>
 
-  <div class="glass-card" id="card-1" style="left: 310px; top: 220px; border-color: rgba(236, 72, 153, 0.2);">
+  <div class="glass-card" id="card-1" style="left: 295px; top: 220px; border-color: rgba(236, 72, 153, 0.25);">
     <div class="card-title">animate_svg</div>
     <div class="card-icon">✨</div>
     <div class="card-desc">Preset vector animations, spinner, & Lottie converter.</div>
   </div>
 
-  <div class="glass-card" id="card-2" style="left: 540px; top: 220px; border-color: rgba(16, 185, 129, 0.2);">
+  <div class="glass-card" id="card-2" style="left: 535px; top: 220px; border-color: rgba(16, 185, 129, 0.25);">
     <div class="card-title">video_create</div>
     <div class="card-icon">🎬</div>
     <div class="card-desc">Renders rich JSON DSL structures to MP4 locally.</div>
   </div>
 
-  <div class="glass-card" id="card-3" style="left: 770px; top: 220px; border-color: rgba(245, 158, 11, 0.2);">
+  <div class="glass-card" id="card-3" style="left: 775px; top: 220px; border-color: rgba(245, 158, 11, 0.25);">
     <div class="card-title">create_chart</div>
     <div class="card-icon">📊</div>
     <div class="card-desc">Compiles line, bar, pie, and radar charts.</div>
   </div>
 
-  <div class="glass-card" id="card-4" style="left: 1000px; top: 220px; border-color: rgba(139, 92, 246, 0.2);">
+  <div class="glass-card" id="card-4" style="left: 1015px; top: 220px; border-color: rgba(139, 92, 246, 0.25);">
     <div class="card-title">diagram_mermaid</div>
     <div class="card-icon">🧬</div>
     <div class="card-desc">Renders flowchart and ER markdown offline.</div>
@@ -533,7 +534,7 @@ async fn main() {
     </div>
   </div>
 
-  <!-- Middle: Growing Chart -->
+  <!-- Middle: Growing Chart (Canvas resized to 280x220 to avoid content overflow) -->
   <div class="window-card" id="win-mid" style="left: 480px; top: 220px; border-color: rgba(16, 185, 129, 0.25); transform: scale(1.08);">
     <div class="window-header">
       <div class="window-dots">
@@ -544,7 +545,7 @@ async fn main() {
       chart_gen.svg
     </div>
     <div class="window-content" style="display: flex; justify-content: center; align-items: center;">
-      <canvas id="chart-canvas" width="290" height="230"></canvas>
+      <canvas id="chart-canvas" width="280" height="220"></canvas>
     </div>
   </div>
 
@@ -606,7 +607,7 @@ async fn main() {
         codeEl.textContent = fullText.slice(0, chars) + (chars % 2 === 0 ? '_' : ' ');
       }
 
-      // Chart Drawing logic
+      // Chart Drawing logic (cw=280, ch=220)
       const chartCanvas = document.getElementById('chart-canvas');
       if (chartCanvas) {
         const cctx = chartCanvas.getContext('2d');
@@ -619,7 +620,7 @@ async fn main() {
         const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6'];
         const barW = 30;
         const gap = 15;
-        const startX = 35;
+        const startX = 30;
 
         // Draw horizontal grid lines
         cctx.strokeStyle = 'rgba(255, 255, 255, 0.06)';
@@ -668,6 +669,21 @@ async fn main() {
     let scene_5_html = r##"
 <div style="position: relative; width: 1280px; height: 720px; overflow: hidden; font-family: 'Inter', sans-serif; display: flex; box-sizing: border-box; background: #000;">
   
+  <style>
+    @keyframes local-shake {
+      0%, 100% { transform: translate(0, 0); }
+      10% { transform: translate(-3px, 2px) rotate(-0.2deg); }
+      30% { transform: translate(3px, -2px) rotate(0.2deg); }
+      50% { transform: translate(-2px, 3px) rotate(-0.5deg); }
+      70% { transform: translate(3px, 2px) rotate(0.5deg); }
+      90% { transform: translate(-3px, -2px) rotate(-0.2deg); }
+    }
+    .local-shake-anim {
+      display: inline-block;
+      animation: local-shake 0.12s infinite;
+    }
+  </style>
+
   <!-- Left Side: Legacy Chaos -->
   <div style="width: 50%; height: 100%; background: radial-gradient(circle at center, #1b0a0a 0%, #030101 100%); border-right: 2px solid #ef4444; position: relative; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 40px;">
     <div style="position: absolute; top: 10%; text-align: center;">
@@ -675,8 +691,8 @@ async fn main() {
       <h3 style="font-size: 32px; font-weight: 800; color: #fca5a5; margin: 5px 0 0 0; text-transform: uppercase;">Python / PyTorch Stack</h3>
     </div>
 
-    <!-- Gauge -->
-    <div style="width: 280px; height: 280px; border-radius: 50%; border: 6px solid #374151; position: relative; display: flex; flex-direction: column; justify-content: center; align-items: center; background: rgba(0,0,0,0.3);">
+    <!-- Gauge (explicit content-box model to align absolute circle correctly) -->
+    <div style="width: 280px; height: 280px; border-radius: 50%; border: 6px solid #374151; position: relative; display: flex; flex-direction: column; justify-content: center; align-items: center; background: rgba(0,0,0,0.3); box-sizing: content-box;">
       <div id="left-memory-val" style="font-size: 40px; font-weight: 900; color: #ef4444; text-shadow: 0 0 15px rgba(239,68,68,0.5);">12.5 GB</div>
       <div style="font-size: 13px; color: #9ca3af; margin-top: 5px; text-transform: uppercase; font-weight: bold; letter-spacing: 1px;">RAM FOOTPRINT</div>
       
@@ -686,8 +702,8 @@ async fn main() {
       </svg>
     </div>
     
-    <div style="margin-top: 30px; font-family: monospace; font-size: 14px; color: #fca5a5; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2); padding: 12px 20px; border-radius: 8px; width: 280px; text-align: center;">
-      <div id="left-oom-msg" style="font-weight: bold; animation: screen-shake 0.1s infinite;">SPIKING CPU & RUNTIME OVERHEAD</div>
+    <div style="margin-top: 30px; font-family: monospace; font-size: 14px; color: #fca5a5; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2); padding: 12px 20px; border-radius: 8px; width: 280px; text-align: center; height: 46px; box-sizing: border-box; display: flex; justify-content: center; align-items: center;">
+      <div id="left-oom-msg" style="font-weight: bold;" class="local-shake-anim">SPIKING CPU & RUNTIME OVERHEAD</div>
     </div>
   </div>
 
@@ -699,7 +715,7 @@ async fn main() {
     </div>
 
     <!-- Gauge -->
-    <div style="width: 280px; height: 280px; border-radius: 50%; border: 6px solid #1e293b; position: relative; display: flex; flex-direction: column; justify-content: center; align-items: center; background: rgba(0,0,0,0.3); box-shadow: 0 0 30px rgba(16, 185, 129, 0.1);">
+    <div style="width: 280px; height: 280px; border-radius: 50%; border: 6px solid #1e293b; position: relative; display: flex; flex-direction: column; justify-content: center; align-items: center; background: rgba(0,0,0,0.3); box-shadow: 0 0 30px rgba(16, 185, 129, 0.1); box-sizing: content-box;">
       <div id="right-memory-val" style="font-size: 40px; font-weight: 900; color: #10b981; text-shadow: 0 0 15px rgba(16,185,129,0.5);">42.3 MB</div>
       <div style="font-size: 13px; color: #9ca3af; margin-top: 5px; text-transform: uppercase; font-weight: bold; letter-spacing: 1px;">RAM FOOTPRINT</div>
       
@@ -709,7 +725,7 @@ async fn main() {
       </svg>
     </div>
 
-    <div style="margin-top: 30px; font-family: monospace; font-size: 14px; color: #a7f3d0; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.2); padding: 12px 20px; border-radius: 8px; width: 280px; text-align: center;">
+    <div style="margin-top: 30px; font-family: monospace; font-size: 14px; color: #a7f3d0; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.2); padding: 12px 20px; border-radius: 8px; width: 280px; text-align: center; height: 46px; box-sizing: border-box; display: flex; justify-content: center; align-items: center;">
       <div style="font-weight: bold;">LIGHTWEIGHT VECTOR CORE &lt; 50MB</div>
     </div>
   </div>
@@ -727,14 +743,13 @@ async fn main() {
       const t = wrapper ? parseFloat(wrapper.getAttribute('data-scene-time')) : 0.0;
       
       // Calculate dynamic memory footprint
-      // Left starts at 4.2GB and ramps up, crashing above 16GB
       let leftVal = 4.2 + t * 4.8 + Math.sin(t * 12) * 0.4;
       if (t > 2.5) {
         leftVal = 16.0;
         leftMem.innerHTML = "OOM CRASH!";
         leftMem.style.color = "#f87171";
         leftCirc.setAttribute('stroke', '#ef4444');
-        leftCirc.style.strokeDashoffset = "0"; // Full loop
+        leftCirc.style.strokeDashoffset = "0";
         if (leftOom) {
           leftOom.innerHTML = "FATAL: HEAP EXPLODED";
           leftOom.style.color = "#ef4444";
@@ -743,7 +758,6 @@ async fn main() {
         }
       } else {
         leftMem.innerHTML = leftVal.toFixed(1) + " GB";
-        // stroke-dasharray is 841. Map leftVal (0 to 16) to dashoffset (841 to 0)
         const offset = 841 - (leftVal / 16.0) * 841;
         leftCirc.style.strokeDashoffset = offset;
       }
@@ -751,7 +765,6 @@ async fn main() {
       // Right remains tiny and constant
       const rightVal = 42.1 + Math.sin(t * 2) * 0.8;
       rightMem.innerHTML = rightVal.toFixed(1) + " MB";
-      // Map rightVal (0 to 100) to dashoffset (841 to 0)
       const offsetRight = 841 - (rightVal / 100.0) * 841;
       rightCirc.style.strokeDashoffset = offsetRight;
     })();
@@ -834,7 +847,6 @@ async fn main() {
         if (t >= 2.0) {
           const logoProgress = Math.min(1.0, (t - 2.0) * 1.5);
           endLogo.style.opacity = logoProgress;
-          // Scale from 0.6 to 1.1, and slightly pulse
           const scale = 0.6 + logoProgress * 0.5 + Math.sin(t * 3.5) * 0.03;
           endLogo.style.transform = `translate(-50%, -50%) scale(${scale})`;
         } else {
@@ -890,7 +902,6 @@ async fn main() {
         if (!mock) continue;
         
         if (t < 2.0) {
-          // Linear interpolation to center
           const progress = t / 2.0;
           const currentX = initialPositions[i].x + (cx - 75 - initialPositions[i].x) * progress;
           const currentY = initialPositions[i].y + (cy - 50 - initialPositions[i].y) * progress;
@@ -937,7 +948,6 @@ async fn main() {
           radius = initialRadius * (1.0 - progress);
           alpha = 0.5 * (1.0 - progress);
         } else {
-          // explosion outward wave
           const expT = t - 2.0;
           radius = expT * 600 + hash(seed + 3) * 50;
           alpha = Math.max(0, 0.6 - expT * 0.8);
@@ -960,7 +970,7 @@ async fn main() {
     let scene_json = json!({
         "width": 1280,
         "height": 720,
-        "fps": 24, // 24 FPS for cinematic smoothness
+        "fps": 24,
         "duration": 28.0,
         "background": "#020306",
         "scenes": [

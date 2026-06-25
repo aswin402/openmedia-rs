@@ -802,8 +802,10 @@ pub struct BrowserFrameRenderer {
 
 impl BrowserFrameRenderer {
     pub async fn launch() -> Result<Self> {
+        let profile_dir = std::env::temp_dir().join(format!("chrome-profile-{}", uuid::Uuid::new_v4()));
         let config = BrowserConfig::builder()
             .no_sandbox()
+            .user_data_dir(profile_dir)
             .build()
             .map_err(|e| OpenMediaError::ConfigError(e.to_string()))?;
         let (browser, mut handler) = Browser::launch(config).await
@@ -856,6 +858,10 @@ impl FrameRenderer for BrowserFrameRenderer {
 
         page.set_content(html_content).await
             .map_err(|e| OpenMediaError::Internal(e.to_string()))?;
+
+        // Give headless Chrome a short delay (50ms) to parse HTML, run scripts, load fonts,
+        // and fully paint the frame before snapshotting it.
+        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
 
         let params = chromiumoxide::page::ScreenshotParams::builder()
             .format(chromiumoxide::cdp::browser_protocol::page::CaptureScreenshotFormat::Png)
@@ -1873,6 +1879,7 @@ pub async fn html_to_image(
     let h = height.unwrap_or(1080);
     let scale = device_scale_factor.unwrap_or(1.0);
 
+    let profile_dir = std::env::temp_dir().join(format!("chrome-profile-{}", uuid::Uuid::new_v4()));
     let config = BrowserConfig::builder()
         .viewport(Viewport {
             width: w,
@@ -1883,6 +1890,7 @@ pub async fn html_to_image(
             has_touch: false,
         })
         .no_sandbox()
+        .user_data_dir(profile_dir)
         .build()
         .map_err(|e| OpenMediaError::ConfigError(e.to_string()))?;
 
@@ -1893,7 +1901,6 @@ pub async fn html_to_image(
         while let Some(h) = handler.next().await {
             if let Err(err) = h {
                 tracing::error!("Legacy browser handler error: {:?}", err);
-                break;
             }
         }
     });
@@ -1912,6 +1919,9 @@ pub async fn html_to_image(
         page.set_content(html_content).await
             .map_err(|e| OpenMediaError::Internal(e.to_string()))?;
     }
+
+    // Give headless Chrome a delay (200ms) to ensure resources and layouts are fully loaded/rendered
+    tokio::time::sleep(std::time::Duration::from_millis(200)).await;
 
     let clean_format = format.to_lowercase();
     let cdp_format = match clean_format.as_str() {
