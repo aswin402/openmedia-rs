@@ -111,9 +111,17 @@ Here are the sample media assets generated natively, offline, and entirely in Ru
 
 ### 🎥 Promotional Videos
 
-We have generated high-quality cinematic advertisement videos to showcase the layout composition and transitions blending:
-- **[openmedia_promo.mp4](openmedia_promo.mp4)**: The official 30-second cinematic launch trailer demonstrating Blur, Glitch, and Radial Wipe transition blends.
-- **[openmedia_sample.mp4](openmedia_sample.mp4)**: A feature-showcase demonstration video showing off SaaS UI layouts.
+We have generated high-quality cinematic advertisement videos to showcase the layout composition and transitions blending. You can play them directly:
+
+#### 🎬 Official Launch Trailer (30s, 24fps)
+<video src="openmedia_promo.mp4" width="100%" controls muted autoplay loop poster="assets/sample_image.png">
+  Your browser does not support the video tag.
+</video>
+
+#### 💻 SaaS UI Feature Showcase (30s, 15fps)
+<video src="openmedia_sample.mp4" width="100%" controls muted loop>
+  Your browser does not support the video tag.
+</video>
 
 ---
 
