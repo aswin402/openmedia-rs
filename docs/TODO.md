@@ -785,14 +785,18 @@
 - [ ] 🟡 **P1** | `ai_list_models` — list models with download status and capabilities
 
 ### Video Tools (Phase 5)
-- [ ] 🔴 **P0** | `video_create` — create video from Scene DSL
-- [ ] 🔴 **P0** | `video_create_slideshow` — quick slideshow from images
-- [ ] 🟡 **P1** | `video_add_transition` — add transition between clips
-- [ ] 🟡 **P1** | `video_add_audio` — add audio track to video
-- [ ] 🟡 **P1** | `video_from_template` — generate from template with parameters
-- [ ] 🟡 **P1** | `video_preview` — generate preview frames only
-- [ ] 🟡 **P1** | `video_extract_frames` — extract frames from existing video
-- [ ] 🟡 **P1** | `video_trim` — trim video to time range
+- [x] 🔴 **P0** | `video_create` — create video from Scene DSL
+- [x] 🔴 **P0** | `video_create_slideshow` — quick slideshow from images
+- [x] 🟡 **P1** | `video_add_transition` — add transition between clips
+- [x] 🟡 **P1** | `video_add_audio` — add audio track to video
+- [x] 🟡 **P1** | `video_from_template` — generate from template with parameters
+- [x] 🟡 **P1** | `template_create` — create and save custom video scene templates
+- [x] 🟡 **P1** | `template_read` — read custom template definitions or list all templates
+- [x] 🟡 **P1** | `template_update` — update custom template definitions
+- [x] 🟡 **P1** | `template_delete` — delete custom template definitions
+- [x] 🟡 **P1** | `video_preview` — generate preview frames only
+- [x] 🟡 **P1** | `video_extract_frames` — extract frames from existing video
+- [x] 🟡 **P1** | `video_trim` — trim video to time range
 
 ### Self-Improvement Tools (Phase 6)
 - [ ] 🟡 **P1** | `improve_score_image` — score with CLIP + aesthetic metrics

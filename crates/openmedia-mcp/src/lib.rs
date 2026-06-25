@@ -365,6 +365,42 @@ pub struct VideoFromTemplateRequest {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct TemplateCreateRequest {
+    /// Alphanumeric template name
+    pub name: String,
+    /// Human readable description
+    pub description: String,
+    /// Expected parameter JSON Schema
+    pub parameter_schema: serde_json::Value,
+    /// VideoScene template with placeholders
+    pub scene_template: serde_json::Value,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct TemplateReadRequest {
+    /// Target template name. If omitted, lists all templates.
+    pub name: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct TemplateUpdateRequest {
+    /// Alphanumeric template name
+    pub name: String,
+    /// Updated description (optional)
+    pub description: Option<String>,
+    /// Updated parameter JSON Schema (optional)
+    pub parameter_schema: Option<serde_json::Value>,
+    /// Updated VideoScene template (optional)
+    pub scene_template: Option<serde_json::Value>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct TemplateDeleteRequest {
+    /// Target template name
+    pub name: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct VideoPreviewRequest {
     /// VideoScene definition (inline JSON or file path)
     pub scene: serde_json::Value,
@@ -1887,8 +1923,8 @@ impl OpenMediaServer {
                 let images = req.parameters["images"].as_array()
                     .ok_or_else(|| "Missing parameters.images array".to_string())?
                     .iter()
-                    .map(|v| v.as_str().unwrap_or("").to_string())
-                    .collect::<Vec<_>>();
+                    .map(|v: &serde_json::Value| v.as_str().unwrap_or("").to_string())
+                    .collect::<Vec<String>>();
                 let duration = req.parameters["duration_per_image"].as_f64().unwrap_or(3.0);
                 let width = req.parameters["width"].as_u64().unwrap_or(1920) as u32;
                 let height = req.parameters["height"].as_u64().unwrap_or(1080) as u32;
@@ -1948,8 +1984,8 @@ impl OpenMediaServer {
                 let bullets = req.parameters["bullets"].as_array()
                     .ok_or_else(|| "Missing parameters.bullets array".to_string())?
                     .iter()
-                    .map(|v| v.as_str().unwrap_or("").to_string())
-                    .collect::<Vec<_>>();
+                    .map(|v: &serde_json::Value| v.as_str().unwrap_or("").to_string())
+                    .collect::<Vec<String>>();
                 let bullet_duration = req.parameters["bullet_duration"].as_f64().unwrap_or(3.0);
                 let width = req.parameters["width"].as_u64().unwrap_or(1920) as u32;
                 let height = req.parameters["height"].as_u64().unwrap_or(1080) as u32;
@@ -2140,7 +2176,7 @@ impl OpenMediaServer {
             }
             "social_media" => {
                 let title = req.parameters["title"].as_str().unwrap_or("Top Facts").to_string();
-                let content_arr = req.parameters["content"].as_array()
+                let content_arr: &Vec<serde_json::Value> = req.parameters["content"].as_array()
                     .ok_or_else(|| "Missing parameters.content array".to_string())?;
                 let duration = req.parameters["scene_duration"].as_f64().unwrap_or(3.0);
                 let bg_color = req.parameters["background_color"].as_str().unwrap_or("#1e1b4b").to_string();
@@ -2461,7 +2497,7 @@ impl OpenMediaServer {
                 let name = req.parameters["product_name"].as_str().unwrap_or("Product").to_string();
                 let image_src = req.parameters["product_image"].as_str()
                     .ok_or_else(|| "Missing parameters.product_image path".to_string())?.to_string();
-                let features_arr = req.parameters["features"].as_array()
+                let features_arr: &Vec<serde_json::Value> = req.parameters["features"].as_array()
                     .ok_or_else(|| "Missing parameters.features array".to_string())?;
                 let duration = req.parameters["scene_duration"].as_f64().unwrap_or(3.0);
                 let bg_color = req.parameters["background_color"].as_str().unwrap_or("#111827").to_string();
@@ -2637,42 +2673,57 @@ impl OpenMediaServer {
                 }
             }
             _ => {
-
-                let width = req.parameters["width"].as_u64().unwrap_or(1920) as u32;
-                let height = req.parameters["height"].as_u64().unwrap_or(1080) as u32;
-                let fps = req.parameters["fps"].as_u64().unwrap_or(30) as u32;
-                openmedia_video::VideoScene {
-                    width,
-                    height,
-                    fps,
-                    duration: 3.0,
-                    background: "#333333".to_string(),
-                    scenes: vec![openmedia_video::Scene {
-                        id: "scene_0".to_string(),
-                        start: 0.0,
-                        end: 3.0,
-                        elements: vec![openmedia_video::SceneElement::Text {
-                            content: format!("Template: {}", req.template_name),
-                            style: openmedia_video::TextStyle {
-                                font_family: "sans-serif".to_string(),
-                                font_size: 36.0,
-                                font_weight: 400,
-                                color: "#ffffff".to_string(),
-                                text_align: "center".to_string(),
-                                line_height: None,
-                                letter_spacing: None,
-                            },
-                            position: openmedia_video::Position {
-                                x: openmedia_video::DimensionValue::Pixels((width / 2) as f64),
-                                y: openmedia_video::DimensionValue::Pixels((height / 2) as f64),
-                            },
-                            anchor: openmedia_video::Anchor::Center,
-                            timeline: None,
+                let template_path = get_templates_dir().join(format!("{}.json", req.template_name.to_lowercase()));
+                if template_path.exists() && template_path.is_file() {
+                    let s = std::fs::read_to_string(&template_path)
+                        .map_err(|e| format!("Failed to read custom template '{}': {}", req.template_name, e))?;
+                    let custom_tmpl: serde_json::Value = serde_json::from_str(&s)
+                        .map_err(|e| format!("Failed to parse custom template JSON: {}", e))?;
+                    
+                    let scene_template = custom_tmpl.get("scene_template")
+                        .ok_or_else(|| "Custom template missing 'scene_template' field".to_string())?;
+                    
+                    let interpolated = interpolate_template(scene_template, &req.parameters)?;
+                    let scene: openmedia_video::VideoScene = serde_json::from_value(interpolated)
+                        .map_err(|e| format!("Failed to deserialize interpolated video scene: {}", e))?;
+                    scene
+                } else {
+                    let width = req.parameters["width"].as_u64().unwrap_or(1920) as u32;
+                    let height = req.parameters["height"].as_u64().unwrap_or(1080) as u32;
+                    let fps = req.parameters["fps"].as_u64().unwrap_or(30) as u32;
+                    openmedia_video::VideoScene {
+                        width,
+                        height,
+                        fps,
+                        duration: 3.0,
+                        background: "#333333".to_string(),
+                        scenes: vec![openmedia_video::Scene {
+                            id: "scene_0".to_string(),
+                            start: 0.0,
+                            end: 3.0,
+                            elements: vec![openmedia_video::SceneElement::Text {
+                                content: format!("Template: {}", req.template_name),
+                                style: openmedia_video::TextStyle {
+                                    font_family: "sans-serif".to_string(),
+                                    font_size: 36.0,
+                                    font_weight: 400,
+                                    color: "#ffffff".to_string(),
+                                    text_align: "center".to_string(),
+                                    line_height: None,
+                                    letter_spacing: None,
+                                },
+                                position: openmedia_video::Position {
+                                    x: openmedia_video::DimensionValue::Pixels((width / 2) as f64),
+                                    y: openmedia_video::DimensionValue::Pixels((height / 2) as f64),
+                                },
+                                anchor: openmedia_video::Anchor::Center,
+                                timeline: None,
+                            }],
                         }],
-                    }],
-                    transitions: vec![],
-                    audio: parse_audio_config(&req.parameters),
-                    custom_fonts: parse_custom_fonts(&req.parameters),
+                        transitions: vec![],
+                        audio: parse_audio_config(&req.parameters),
+                        custom_fonts: parse_custom_fonts(&req.parameters),
+                    }
                 }
             }
         };
@@ -3239,6 +3290,228 @@ impl OpenMediaServer {
             .map(Json)
             .map_err(|e| e.to_string())
     }
+
+    #[tool(
+        name = "template_create",
+        description = "Save a new custom video scene template. Custom templates can use {{parameter_name}} placeholders in their scene structure."
+    )]
+    pub async fn template_create(
+        &self,
+        params: Parameters<TemplateCreateRequest>,
+    ) -> Result<Json<serde_json::Value>, String> {
+        let req = params.0;
+        let templates_dir = get_templates_dir();
+        std::fs::create_dir_all(&templates_dir)
+            .map_err(|e| format!("Failed to create templates directory: {}", e))?;
+        
+        let template_path = templates_dir.join(format!("{}.json", req.name.to_lowercase()));
+        
+        let template_data = serde_json::json!({
+            "name": req.name,
+            "description": req.description,
+            "parameter_schema": req.parameter_schema,
+            "scene_template": req.scene_template,
+        });
+        
+        let content = serde_json::to_string_pretty(&template_data)
+            .map_err(|e| e.to_string())?;
+        
+        std::fs::write(&template_path, content)
+            .map_err(|e| format!("Failed to write template file: {}", e))?;
+        
+        let response = serde_json::json!({
+            "status": "success",
+            "message": format!("Template '{}' created successfully", req.name),
+            "path": template_path.to_string_lossy().to_string(),
+        });
+        
+        Ok(Json(response))
+    }
+
+    #[tool(
+        name = "template_read",
+        description = "Read a specific custom template definition, or list all available custom and built-in templates."
+    )]
+    pub async fn template_read(
+        &self,
+        params: Parameters<TemplateReadRequest>,
+    ) -> Result<Json<serde_json::Value>, String> {
+        let req = params.0;
+        let templates_dir = get_templates_dir();
+        
+        if let Some(ref name) = req.name {
+            let template_path = templates_dir.join(format!("{}.json", name.to_lowercase()));
+            if !template_path.exists() || !template_path.is_file() {
+                return Err(format!("Template '{}' not found", name));
+            }
+            
+            let s = std::fs::read_to_string(&template_path).map_err(|e| e.to_string())?;
+            let custom_tmpl: serde_json::Value = serde_json::from_str(&s).map_err(|e| e.to_string())?;
+            Ok(Json(custom_tmpl))
+        } else {
+            let mut list = Vec::new();
+            
+            // Built-in list
+            list.push(serde_json::json!({
+                "name": "slideshow",
+                "type": "built-in",
+                "description": "Generate slideshow video from an array of image files.",
+                "expected_parameters": {
+                    "images": "Array of image source paths/URLs",
+                    "duration_per_image": "Float (default 3.0)",
+                    "width": "U32 (default 1920)",
+                    "height": "U32 (default 1080)",
+                    "fps": "U32 (default 30)"
+                }
+            }));
+            list.push(serde_json::json!({
+                "name": "text_explainer",
+                "type": "built-in",
+                "description": "Compile a text explainer video from bullet points and titles.",
+                "expected_parameters": {
+                    "title": "String",
+                    "bullets": "Array of strings",
+                    "bullet_duration": "Float (default 4.0)",
+                    "width": "U32 (default 1920)",
+                    "height": "U32 (default 1080)",
+                    "fps": "U32 (default 30)"
+                }
+            }));
+            list.push(serde_json::json!({
+                "name": "data_dashboard",
+                "type": "built-in",
+                "description": "Generate animated dashboard scenes showing statistical charts.",
+                "expected_parameters": {
+                    "title": "String",
+                    "charts": "Array of chart configurations (type, title, data)",
+                    "chart_duration": "Float (default 3.0)",
+                    "width": "U32 (default 1920)",
+                    "height": "U32 (default 1080)",
+                    "fps": "U32 (default 30)"
+                }
+            }));
+            list.push(serde_json::json!({
+                "name": "social_media",
+                "type": "built-in",
+                "description": "Create portrait videos (9:16 layout) with background and card animations for social media.",
+                "expected_parameters": {
+                    "title": "String",
+                    "content": "Array of strings (points/facts)",
+                    "scene_duration": "Float (default 3.0)",
+                    "background_color": "String (default #1e1b4b)",
+                    "fps": "U32 (default 30)"
+                }
+            }));
+            list.push(serde_json::json!({
+                "name": "product_showcase",
+                "type": "built-in",
+                "description": "Generate video showcasing product image and descriptive features.",
+                "expected_parameters": {
+                    "product_name": "String",
+                    "product_image": "String path",
+                    "features": "Array of strings",
+                    "scene_duration": "Float (default 3.0)",
+                    "background_color": "String (default #111827)",
+                    "width": "U32 (default 1920)",
+                    "height": "U32 (default 1080)",
+                    "fps": "U32 (default 30)"
+                }
+            }));
+            
+            // Custom list
+            if templates_dir.exists() && templates_dir.is_dir() {
+                if let Ok(entries) = std::fs::read_dir(&templates_dir) {
+                    for entry in entries.flatten() {
+                        let path = entry.path();
+                        if path.is_file() && path.extension().and_then(|s| s.to_str()) == Some("json") {
+                            if let Ok(s) = std::fs::read_to_string(&path) {
+                                if let Ok(custom_tmpl) = serde_json::from_str::<serde_json::Value>(&s) {
+                                    list.push(serde_json::json!({
+                                        "name": custom_tmpl.get("name").unwrap_or(&serde_json::Value::Null),
+                                        "type": "custom",
+                                        "description": custom_tmpl.get("description").unwrap_or(&serde_json::Value::Null),
+                                        "parameter_schema": custom_tmpl.get("parameter_schema").unwrap_or(&serde_json::Value::Null),
+                                    }));
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            
+            Ok(Json(serde_json::json!({ "templates": list })))
+        }
+    }
+
+    #[tool(
+        name = "template_update",
+        description = "Update an existing custom template definition."
+    )]
+    pub async fn template_update(
+        &self,
+        params: Parameters<TemplateUpdateRequest>,
+    ) -> Result<Json<serde_json::Value>, String> {
+        let req = params.0;
+        let templates_dir = get_templates_dir();
+        let template_path = templates_dir.join(format!("{}.json", req.name.to_lowercase()));
+        
+        if !template_path.exists() || !template_path.is_file() {
+            return Err(format!("Template '{}' not found", req.name));
+        }
+        
+        let s = std::fs::read_to_string(&template_path).map_err(|e| e.to_string())?;
+        let mut template_data: serde_json::Value = serde_json::from_str(&s).map_err(|e| e.to_string())?;
+        
+        if let Some(desc) = req.description {
+            template_data["description"] = serde_json::json!(desc);
+        }
+        if let Some(schema) = req.parameter_schema {
+            template_data["parameter_schema"] = schema;
+        }
+        if let Some(template) = req.scene_template {
+            template_data["scene_template"] = template;
+        }
+        
+        let content = serde_json::to_string_pretty(&template_data)
+            .map_err(|e| e.to_string())?;
+        
+        std::fs::write(&template_path, content)
+            .map_err(|e| format!("Failed to write updated template file: {}", e))?;
+        
+        let response = serde_json::json!({
+            "status": "success",
+            "message": format!("Template '{}' updated successfully", req.name),
+        });
+        
+        Ok(Json(response))
+    }
+
+    #[tool(
+        name = "template_delete",
+        description = "Delete a custom template definition."
+    )]
+    pub async fn template_delete(
+        &self,
+        params: Parameters<TemplateDeleteRequest>,
+    ) -> Result<Json<serde_json::Value>, String> {
+        let req = params.0;
+        let templates_dir = get_templates_dir();
+        let template_path = templates_dir.join(format!("{}.json", req.name.to_lowercase()));
+        
+        if !template_path.exists() || !template_path.is_file() {
+            return Err(format!("Template '{}' not found", req.name));
+        }
+        
+        std::fs::remove_file(&template_path)
+            .map_err(|e| format!("Failed to delete template file: {}", e))?;
+        
+        let response = serde_json::json!({
+            "status": "success",
+            "message": format!("Template '{}' deleted successfully", req.name),
+        });
+        
+        Ok(Json(response))
+    }
 }
 
 fn override_theme_fields(theme: &mut mermaid_rs_renderer::Theme, overrides: &serde_json::Value) {
@@ -3387,6 +3660,27 @@ fn parse_audio_config(parameters: &serde_json::Value) -> Option<openmedia_video:
         });
     }
     None
+}
+
+fn get_templates_dir() -> std::path::PathBuf {
+    std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from(".")).join("assets").join("templates")
+}
+
+fn interpolate_template(template_json: &serde_json::Value, parameters: &serde_json::Value) -> Result<serde_json::Value, String> {
+    let mut template_str = serde_json::to_string(template_json).map_err(|e| e.to_string())?;
+    
+    if let Some(obj) = parameters.as_object() {
+        for (key, val) in obj {
+            let placeholder = format!("{{{{{}}}}}", key);
+            let replacement = match val {
+                serde_json::Value::String(s) => s.clone(),
+                other => other.to_string(),
+            };
+            template_str = template_str.replace(&placeholder, &replacement);
+        }
+    }
+    
+    serde_json::from_str(&template_str).map_err(|e| format!("Failed to parse interpolated template: {}", e))
 }
 
 fn parse_custom_fonts(parameters: &serde_json::Value) -> Option<Vec<openmedia_video::CustomFontSpec>> {
@@ -4157,6 +4451,149 @@ mod tests {
         let val = result.unwrap().0;
         let output: openmedia_core::VideoSpec = serde_json::from_value(val).unwrap();
         assert!(output.path.exists());
-        let _ = std::fs::remove_file(output.path);
+    }
+
+    #[tokio::test]
+    async fn test_mcp_template_crud_workflow() {
+        let mut config = Config::default();
+        let temp_dir = std::env::temp_dir();
+        let output_dir = temp_dir.join("openmedia_test_template_crud");
+        config.paths.output_dir = output_dir.clone();
+        let _ = std::fs::create_dir_all(&output_dir);
+        let server = OpenMediaServer::new(config).await.unwrap();
+
+        let name = "test_mcp_template_crud_test_tmpl".to_string();
+        let template_file_path = get_templates_dir().join(format!("{}.json", name.to_lowercase()));
+
+        struct Cleanup(std::path::PathBuf);
+        impl Drop for Cleanup {
+            fn drop(&mut self) {
+                let _ = std::fs::remove_file(&self.0);
+            }
+        }
+        // Ensure cleanup of any leftover file
+        let _ = std::fs::remove_file(&template_file_path);
+        let _cleanup = Cleanup(template_file_path);
+
+        // 1. Create a custom template
+        let scene_template = serde_json::json!({
+            "width": 320,
+            "height": 240,
+            "fps": 5,
+            "duration": 2.0,
+            "background": "{{bg_color}}",
+            "scenes": [
+                {
+                    "id": "scene_0",
+                    "start": 0.0,
+                    "end": 2.0,
+                    "elements": [
+                        {
+                            "type": "text",
+                            "content": "{{text_content}}",
+                            "style": {
+                                "font_family": "sans-serif",
+                                "font_size": 24.0,
+                                "font_weight": 400,
+                                "color": "#ffffff",
+                                "text_align": "center"
+                            },
+                            "position": {
+                                "x": 160.0,
+                                "y": 120.0
+                            },
+                            "anchor": "center"
+                        }
+                    ]
+                }
+            ],
+            "transitions": []
+        });
+
+        let create_params = Parameters(TemplateCreateRequest {
+            name: name.clone(),
+            description: "A test custom template".to_string(),
+            parameter_schema: serde_json::json!({
+                "type": "object",
+                "properties": {
+                    "bg_color": { "type": "string" },
+                    "text_content": { "type": "string" }
+                }
+            }),
+            scene_template,
+        });
+
+        let create_res = server.template_create(create_params).await;
+        assert!(create_res.is_ok(), "Template creation failed");
+
+        // 2. Read single template
+        let read_params = Parameters(TemplateReadRequest {
+            name: Some(name.clone()),
+        });
+        let read_res = server.template_read(read_params).await;
+        assert!(read_res.is_ok());
+        let read_val = read_res.unwrap().0;
+        assert_eq!(read_val["name"], "test_mcp_template_crud_test_tmpl");
+        assert_eq!(read_val["description"], "A test custom template");
+
+        // 3. List templates
+        let list_params = Parameters(TemplateReadRequest { name: None });
+        let list_res = server.template_read(list_params).await;
+        assert!(list_res.is_ok());
+        let list_val = list_res.unwrap().0;
+        let templates = list_val["templates"].as_array().expect("Templates list not found");
+        let found = templates.iter().any(|t| t["name"] == "test_mcp_template_crud_test_tmpl" && t["type"] == "custom");
+        assert!(found, "Created template was not found in listing");
+
+        // 4. Update template
+        let update_params = Parameters(TemplateUpdateRequest {
+            name: name.clone(),
+            description: Some("Updated test template".to_string()),
+            parameter_schema: None,
+            scene_template: None,
+        });
+        let update_res = server.template_update(update_params).await;
+        assert!(update_res.is_ok());
+
+        // Verify update
+        let read_params2 = Parameters(TemplateReadRequest {
+            name: Some(name.clone()),
+        });
+        let read_res2 = server.template_read(read_params2).await;
+        assert!(read_res2.is_ok());
+        let read_val2 = read_res2.unwrap().0;
+        assert_eq!(read_val2["description"], "Updated test template");
+
+        // 5. Generate video from custom template
+        let video_params = Parameters(VideoFromTemplateRequest {
+            template_name: name.clone(),
+            parameters: serde_json::json!({
+                "bg_color": "#ff0000",
+                "text_content": "Hello Interpolated World"
+            }),
+            output_path: None,
+        });
+        let video_res = server.video_from_template(video_params).await;
+        assert!(video_res.is_ok(), "Failed to generate video from custom template: {:?}", video_res.err());
+        let video_val = video_res.unwrap().0;
+        let video_output: openmedia_core::VideoSpec = serde_json::from_value(video_val).unwrap();
+        assert!(video_output.path.exists());
+        let _ = std::fs::remove_file(&video_output.path);
+
+        // 6. Delete template
+        let delete_params = Parameters(TemplateDeleteRequest {
+            name: name.clone(),
+        });
+        let delete_res = server.template_delete(delete_params).await;
+        assert!(delete_res.is_ok());
+
+        // Verify it is gone
+        let read_params3 = Parameters(TemplateReadRequest {
+            name: Some(name.clone()),
+        });
+        let read_res3 = server.template_read(read_params3).await;
+        assert!(read_res3.is_err());
+
+        let _ = std::fs::remove_dir_all(&output_dir);
     }
 }

@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v0.0.15] - 2026-06-25
+
+### Added
+- **Video Template CRUD Operations**: Implemented `template_create`, `template_read`, `template_update`, and `template_delete` MCP tools, enabling clients/agents to manage custom template definitions.
+- **Dynamic Custom Template Interpolation**: Extended `video_from_template` to support custom templates by loading saved definitions from `assets/templates/`, interpolating parameter placeholders using string substitution, and rendering the compiled scenes.
+- **Integration Tests**: Added a complete CRUD workflow integration test `test_mcp_template_crud_workflow` to verify template creation, listing, reading, updating, rendering, and deletion.
+
 ## [v0.0.14] - 2026-06-25
 
 ### Added
