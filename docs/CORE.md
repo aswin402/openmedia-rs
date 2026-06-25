@@ -2392,26 +2392,25 @@ pub enum DiagramType {
 
 /// Generate a chart as SVG
 pub fn generate_chart(config: &ChartConfig) -> Result<String> {
-    match config.chart_type {
-        ChartType::Bar => generate_bar_chart(config),
-        ChartType::Line => generate_line_chart(config),
-        ChartType::Pie => generate_pie_chart(config),
-        ChartType::Scatter => generate_scatter_chart(config),
-        ChartType::Radar => generate_radar_chart(config),
-        ChartType::Heatmap => generate_heatmap(config),
-        ChartType::Treemap => generate_treemap(config),
-        ChartType::Gauge => generate_gauge(config),
-    }
+    let chart_type_str = match config.chart_type {
+        ChartType::Bar => "bar",
+        ChartType::Line => "line",
+        ChartType::Pie => "pie",
+        _ => "bar",
+    };
+    let chart_points: Vec<ChartPoint> = serde_json::from_value(config.data.clone())
+        .map_err(|e| OpenMediaError::InvalidParameter {
+            param: "data".to_string(),
+            reason: format!("Failed to parse chart data as ChartPoint array: {}", e),
+        })?;
+    create_chart(
+        chart_type_str,
+        config.title.as_deref(),
+        &chart_points,
+        config.width,
+        config.height,
+    )
 }
-
-fn generate_bar_chart(config: &ChartConfig) -> Result<String> { todo!() }
-fn generate_line_chart(config: &ChartConfig) -> Result<String> { todo!() }
-fn generate_pie_chart(config: &ChartConfig) -> Result<String> { todo!() }
-fn generate_scatter_chart(config: &ChartConfig) -> Result<String> { todo!() }
-fn generate_radar_chart(config: &ChartConfig) -> Result<String> { todo!() }
-fn generate_heatmap(config: &ChartConfig) -> Result<String> { todo!() }
-fn generate_treemap(config: &ChartConfig) -> Result<String> { todo!() }
-fn generate_gauge(config: &ChartConfig) -> Result<String> { todo!() }
 ```
 
 ---

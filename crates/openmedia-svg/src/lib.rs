@@ -614,7 +614,24 @@ pub enum DiagramType {
 
 /// Generate a chart as SVG
 pub fn generate_chart(config: &ChartConfig) -> Result<String> {
-    Ok(format!("<svg width=\"{}\" height=\"{}\"><text y=\"20\">Chart: {:?}</text></svg>", config.width, config.height, config.chart_type))
+    let chart_type_str = match config.chart_type {
+        ChartType::Bar => "bar",
+        ChartType::Line => "line",
+        ChartType::Pie => "pie",
+        _ => "bar",
+    };
+    let chart_points: Vec<ChartPoint> = serde_json::from_value(config.data.clone())
+        .map_err(|e| OpenMediaError::InvalidParameter {
+            param: "data".to_string(),
+            reason: format!("Failed to parse chart data as ChartPoint array: {}", e),
+        })?;
+    create_chart(
+        chart_type_str,
+        config.title.as_deref(),
+        &chart_points,
+        config.width,
+        config.height,
+    )
 }
 
 /// Build SVG XML string from JSON elements

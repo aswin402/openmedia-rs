@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v0.0.14] - 2026-06-25
+
+### Added
+- **Native Vector Chart Rendering Support**: Implemented proper data parsing and chart generation in `generate_chart` (in `openmedia-svg`), resolving a previous placeholder stub. Chart elements can now parse JSON data correctly and delegate to internal `create_chart` layouts.
+- **MCP Video Creation Example**: Added a runnable example (`mcp_video_example.rs`) demonstrating how to use the `video_create` MCP tool via the `OpenMediaServer` client to render shapes, texts, keyframe-based animations, and data charts offline without Chromium-based frame failures.
+- **Headless Browser Diagnostic Tool**: Added `test_chrome.rs` utility to debug browser launching and event stream handlers.
+
 ## [v0.0.13] - 2026-06-25
 
 ### Added

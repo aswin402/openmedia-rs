@@ -3,4 +3,5 @@
 /output
 .env
 .idea/
-.vscode/
+
+*.mp4

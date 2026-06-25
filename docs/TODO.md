@@ -754,7 +754,7 @@
 
 ### SVG Tools (Phase 1)
 - [ ] 🔴 **P0** | `svg_generate_icon` — generate icon by name, style, size, colors
-- [ ] 🔴 **P0** | `svg_generate_chart` — generate chart from data series and type
+- [x] 🔴 **P0** | `svg_generate_chart` — generate chart from data series and type
 - [ ] 🔴 **P0** | `svg_generate_diagram` — generate diagram from structured spec
 - [ ] 🔴 **P0** | `svg_create_custom` — create SVG from builder instruction set (JSON)
 - [ ] 🔴 **P0** | `svg_optimize` — optimize existing SVG string for file size
@@ -821,7 +821,7 @@
 ### Unit Tests
 - [ ] 🔴 **P0** | `openmedia-core` unit tests — config, hardware, errors, types, progress
 - [ ] 🔴 **P0** | `openmedia-svg` unit tests — builder, shapes, styles, gradients, filters
-- [ ] 🔴 **P0** | `openmedia-svg` chart unit tests — axis scaling, data rendering per chart type
+- [x] 🔴 **P0** | `openmedia-svg` chart unit tests — axis scaling, data rendering per chart type
 - [ ] 🔴 **P0** | `openmedia-svg` diagram unit tests — layout algorithms, edge routing
 - [ ] 🔴 **P0** | `openmedia-svg-animate` unit tests — easing functions, timeline, SMIL, CSS
 - [ ] 🔴 **P0** | `openmedia-image` unit tests — shader output, transforms, format conversion
