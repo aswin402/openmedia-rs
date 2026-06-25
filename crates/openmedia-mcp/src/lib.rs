@@ -1690,17 +1690,7 @@ impl OpenMediaServer {
             if i > 0 {
                 let from = format!("slide_{}", i - 1);
                 let to = scene_id;
-                let transition_type = match trans_type_str.to_lowercase().as_str() {
-                    "none" => openmedia_video::TransitionType::None,
-                    "crossfade" => openmedia_video::TransitionType::Crossfade,
-                    "slide_left" => openmedia_video::TransitionType::SlideLeft,
-                    "slide_right" => openmedia_video::TransitionType::SlideRight,
-                    "slide_up" => openmedia_video::TransitionType::SlideUp,
-                    "slide_down" => openmedia_video::TransitionType::SlideDown,
-                    "wipe_left" => openmedia_video::TransitionType::WipeLeft,
-                    "wipe_right" => openmedia_video::TransitionType::WipeRight,
-                    _ => openmedia_video::TransitionType::Crossfade,
-                };
+                let transition_type = parse_transition_type(&trans_type_str);
                 transitions.push(openmedia_video::SceneTransition {
                     from,
                     to,
@@ -1773,17 +1763,7 @@ impl OpenMediaServer {
         let mut scene: VideoScene = serde_json::from_str(&s).map_err(|e| e.to_string())?;
 
         let duration = req.duration.unwrap_or(0.5);
-        let transition_type = match req.transition_type.to_lowercase().as_str() {
-            "none" => openmedia_video::TransitionType::None,
-            "crossfade" => openmedia_video::TransitionType::Crossfade,
-            "slide_left" => openmedia_video::TransitionType::SlideLeft,
-            "slide_right" => openmedia_video::TransitionType::SlideRight,
-            "slide_up" => openmedia_video::TransitionType::SlideUp,
-            "slide_down" => openmedia_video::TransitionType::SlideDown,
-            "wipe_left" => openmedia_video::TransitionType::WipeLeft,
-            "wipe_right" => openmedia_video::TransitionType::WipeRight,
-            _ => openmedia_video::TransitionType::Crossfade,
-        };
+        let transition_type = parse_transition_type(&req.transition_type);
 
         scene.transitions.retain(|t| !(t.from == req.from_scene_id && t.to == req.to_scene_id));
 
@@ -3605,14 +3585,7 @@ fn parse_transition_params(
 ) -> (openmedia_video::TransitionType, f64, Option<String>) {
     let trans_type = parameters.get("transition_type")
         .and_then(|v| v.as_str())
-        .map(|s| match s.to_lowercase().as_str() {
-            "crossfade" => openmedia_video::TransitionType::Crossfade,
-            "slide_left" | "slideleft" => openmedia_video::TransitionType::SlideLeft,
-            "slide_right" | "slideright" => openmedia_video::TransitionType::SlideRight,
-            "slide_up" | "slideup" => openmedia_video::TransitionType::SlideUp,
-            "slide_down" | "slidedown" => openmedia_video::TransitionType::SlideDown,
-            _ => default_type.clone(),
-        })
+        .map(|s| parse_transition_type_with_fallback(s, default_type.clone()))
         .unwrap_or(default_type);
 
     let duration = parameters.get("transition_duration")
@@ -3702,6 +3675,32 @@ fn parse_custom_fonts(parameters: &serde_json::Value) -> Option<Vec<openmedia_vi
         }
     }
     None
+}
+
+pub fn parse_transition_type(s: &str) -> openmedia_video::TransitionType {
+    parse_transition_type_with_fallback(s, openmedia_video::TransitionType::Crossfade)
+}
+
+pub fn parse_transition_type_with_fallback(
+    s: &str,
+    default_type: openmedia_video::TransitionType,
+) -> openmedia_video::TransitionType {
+    match s.to_lowercase().as_str() {
+        "none" => openmedia_video::TransitionType::None,
+        "crossfade" => openmedia_video::TransitionType::Crossfade,
+        "slide_left" | "slideleft" | "slide-left" => openmedia_video::TransitionType::SlideLeft,
+        "slide_right" | "slideright" | "slide-right" => openmedia_video::TransitionType::SlideRight,
+        "slide_up" | "slideup" | "slide-up" => openmedia_video::TransitionType::SlideUp,
+        "slide_down" | "slidedown" | "slide-down" => openmedia_video::TransitionType::SlideDown,
+        "zoom_in" | "zoomin" | "zoom-in" => openmedia_video::TransitionType::ZoomIn,
+        "zoom_out" | "zoomout" | "zoom-out" => openmedia_video::TransitionType::ZoomOut,
+        "wipe_left" | "wipeleft" | "wipe-left" => openmedia_video::TransitionType::WipeLeft,
+        "wipe_right" | "wiperight" | "wipe-right" => openmedia_video::TransitionType::WipeRight,
+        "blur" => openmedia_video::TransitionType::Blur,
+        "glitch" => openmedia_video::TransitionType::Glitch,
+        "radial_wipe" | "radialwipe" | "radial-wipe" => openmedia_video::TransitionType::RadialWipe,
+        _ => default_type,
+    }
 }
 
 #[cfg(test)]
@@ -4595,5 +4594,14 @@ mod tests {
         assert!(read_res3.is_err());
 
         let _ = std::fs::remove_dir_all(&output_dir);
+    }
+
+    #[test]
+    fn test_mcp_transition_presets_parsing() {
+        assert_eq!(parse_transition_type("blur"), openmedia_video::TransitionType::Blur);
+        assert_eq!(parse_transition_type("GLITCH"), openmedia_video::TransitionType::Glitch);
+        assert_eq!(parse_transition_type("radial_wipe"), openmedia_video::TransitionType::RadialWipe);
+        assert_eq!(parse_transition_type("radialwipe"), openmedia_video::TransitionType::RadialWipe);
+        assert_eq!(parse_transition_type("radial-wipe"), openmedia_video::TransitionType::RadialWipe);
     }
 }
