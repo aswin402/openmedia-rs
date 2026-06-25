@@ -220,7 +220,7 @@ pub struct SceneTransition {
     pub easing: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum TransitionType {
     None,
@@ -238,6 +238,9 @@ pub enum TransitionType {
     Dissolve,
     IrisIn,
     IrisOut,
+    Blur,
+    Glitch,
+    RadialWipe,
 }
 
 /// Audio configuration for a video

@@ -509,6 +509,7 @@ pub enum ChartType {
     Bar,
     Line,
     Pie,
+    Area,
     Scatter,
     Radar,
     Heatmap,
@@ -618,6 +619,9 @@ pub fn generate_chart(config: &ChartConfig) -> Result<String> {
         ChartType::Bar => "bar",
         ChartType::Line => "line",
         ChartType::Pie => "pie",
+        ChartType::Area => "area",
+        ChartType::Scatter => "scatter",
+        ChartType::Radar => "radar",
         _ => "bar",
     };
     let chart_points: Vec<ChartPoint> = serde_json::from_value(config.data.clone())
@@ -912,5 +916,21 @@ mod tests {
         assert!(out_path.exists());
         let _ = std::fs::remove_file(out_path);
     }
+
+    #[test]
+    fn test_new_chart_and_transition_variants_parsing() {
+        let area_json = "\"area\"";
+        let area: ChartType = serde_json::from_str(area_json).unwrap();
+        assert!(matches!(area, ChartType::Area));
+
+        let scatter_json = "\"scatter\"";
+        let scatter: ChartType = serde_json::from_str(scatter_json).unwrap();
+        assert!(matches!(scatter, ChartType::Scatter));
+
+        let radar_json = "\"radar\"";
+        let radar: ChartType = serde_json::from_str(radar_json).unwrap();
+        assert!(matches!(radar, ChartType::Radar));
+    }
 }
+
 
