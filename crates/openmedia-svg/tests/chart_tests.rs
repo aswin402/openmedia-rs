@@ -51,3 +51,23 @@ fn test_pie_chart_generation() {
     assert!(svg.contains("Blue: 70"));
     assert!(svg.contains("<path d="));
 }
+
+#[test]
+fn test_area_chart_generation() {
+    let data = vec![
+        openmedia_svg::ChartPoint { label: "Jan".to_string(), value: 10.0 },
+        openmedia_svg::ChartPoint { label: "Feb".to_string(), value: 20.0 },
+    ];
+    let svg = openmedia_svg::create_chart("area", Some("Area Test"), &data, 800, 600).unwrap();
+    assert!(svg.contains("<path d="));
+}
+
+#[test]
+fn test_scatter_chart_generation() {
+    let data = vec![
+        openmedia_svg::ChartPoint { label: "Jan".to_string(), value: 10.0 },
+        openmedia_svg::ChartPoint { label: "Feb".to_string(), value: 20.0 },
+    ];
+    let svg = openmedia_svg::create_chart("scatter", Some("Scatter Test"), &data, 800, 600).unwrap();
+    assert!(svg.contains("<circle cx="));
+}

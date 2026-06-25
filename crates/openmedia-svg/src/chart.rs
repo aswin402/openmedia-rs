@@ -252,6 +252,131 @@ pub fn create_chart(
                 legend_y += 25.0;
             }
         }
+        "area" => {
+            let margin_left = 60.0;
+            let margin_right = 40.0;
+            let margin_top = 70.0;
+            let margin_bottom = 60.0;
+
+            let plot_width = width as f64 - margin_left - margin_right;
+            let plot_height = height as f64 - margin_top - margin_bottom;
+
+            let max_val = data.iter().map(|p| p.value).fold(0.0f64, f64::max);
+            let max_val = if max_val <= 0.0 { 1.0 } else { max_val };
+
+            // Grid lines
+            let grid_count = 5;
+            for i in 0..=grid_count {
+                let ratio = i as f64 / grid_count as f64;
+                let y_val = margin_top + plot_height * (1.0 - ratio);
+                let label_val = ratio * max_val;
+                builder.path(&format!("M {} {} L {} {}", margin_left, y_val, width as f64 - margin_right, y_val))
+                    .stroke("#333355").stroke_width(1.0).fill("none").finish();
+                builder.text(10.0, y_val + 4.0, &format!("{:.1}", label_val))
+                    .fill("#94a3b8").font_size(10.0).font_family("sans-serif").finish();
+            }
+
+            let n = data.len();
+            let y_base = margin_top + plot_height;
+            
+            // 1. Build area polygon path
+            let mut poly_points = format!("M {} {}", margin_left, y_base);
+            for i in 0..n {
+                let p = &data[i];
+                let x = if n > 1 {
+                    margin_left + (i as f64 / (n - 1) as f64) * plot_width
+                } else {
+                    margin_left + plot_width / 2.0
+                };
+                let y = margin_top + plot_height - (p.value / max_val) * plot_height;
+                poly_points.push_str(&format!(" L {} {}", x, y));
+            }
+            let last_x = if n > 1 { margin_left + plot_width } else { margin_left + plot_width / 2.0 };
+            poly_points.push_str(&format!(" L {} {} Z", last_x, y_base));
+
+            builder.path(&poly_points)
+                .fill("#3b82f6")
+                .opacity(0.3)
+                .finish();
+
+            // 2. Draw line and markers
+            let mut line_path = String::new();
+            for i in 0..n {
+                let p = &data[i];
+                let x = if n > 1 {
+                    margin_left + (i as f64 / (n - 1) as f64) * plot_width
+                } else {
+                    margin_left + plot_width / 2.0
+                };
+                let y = margin_top + plot_height - (p.value / max_val) * plot_height;
+
+                if i == 0 {
+                    line_path.push_str(&format!("M {} {}", x, y));
+                } else {
+                    line_path.push_str(&format!(" L {} {}", x, y));
+                }
+
+                builder.circle(x, y, 4.0)
+                    .fill("#ffffff").stroke("#3b82f6").stroke_width(2.0).finish();
+
+                // Labels
+                let label_x = x - (p.label.len() as f64 * 3.0);
+                builder.text(label_x, y_base + 20.0, &p.label)
+                    .fill("#94a3b8").font_size(10.0).font_family("sans-serif").finish();
+            }
+            builder.path(&line_path)
+                .stroke("#3b82f6").stroke_width(3.0).fill("none").finish();
+        }
+        "scatter" => {
+            let margin_left = 60.0;
+            let margin_right = 40.0;
+            let margin_top = 70.0;
+            let margin_bottom = 60.0;
+
+            let plot_width = width as f64 - margin_left - margin_right;
+            let plot_height = height as f64 - margin_top - margin_bottom;
+
+            let max_val = data.iter().map(|p| p.value).fold(0.0f64, f64::max);
+            let max_val = if max_val <= 0.0 { 1.0 } else { max_val };
+
+            // Grid lines
+            let grid_count = 5;
+            for i in 0..=grid_count {
+                let ratio = i as f64 / grid_count as f64;
+                let y_val = margin_top + plot_height * (1.0 - ratio);
+                let label_val = ratio * max_val;
+                builder.path(&format!("M {} {} L {} {}", margin_left, y_val, width as f64 - margin_right, y_val))
+                    .stroke("#333355").stroke_width(1.0).fill("none").finish();
+                builder.text(10.0, y_val + 4.0, &format!("{:.1}", label_val))
+                    .fill("#94a3b8").font_size(10.0).font_family("sans-serif").finish();
+            }
+
+            let n = data.len();
+            let y_base = margin_top + plot_height;
+
+            for i in 0..n {
+                let p = &data[i];
+                let x = if n > 1 {
+                    margin_left + (i as f64 / (n - 1) as f64) * plot_width
+                } else {
+                    margin_left + plot_width / 2.0
+                };
+                let y = margin_top + plot_height - (p.value / max_val) * plot_height;
+
+                let color = palette[i % palette.len()];
+                builder.circle(x, y, 6.0)
+                    .fill(color).stroke("#ffffff").stroke_width(1.5).finish();
+
+                // Value label above dot
+                builder.text(x - 10.0, y - 10.0, &format!("{:.1}", p.value))
+                    .fill("#ffffff").font_size(9.0).font_family("sans-serif").finish();
+
+                // X-axis labels
+                let label_x = x - (p.label.len() as f64 * 3.0);
+                builder.text(label_x, y_base + 20.0, &p.label)
+                    .fill("#94a3b8").font_size(10.0).font_family("sans-serif").finish();
+            }
+        }
         other => {
             return Err(OpenMediaError::InvalidParameter {
                 param: "chart_type".to_string(),

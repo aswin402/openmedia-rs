@@ -202,6 +202,11 @@ impl<'a> PathBuilder<'a> {
         self
     }
 
+    pub fn opacity(mut self, opacity: f64) -> Self {
+        self.attrs.insert("opacity".to_string(), opacity.to_string());
+        self
+    }
+
     pub fn finish(self) -> &'a mut SvgBuilder {
         self.builder.elements.push(SvgElement::Path {
             d: self.d,
