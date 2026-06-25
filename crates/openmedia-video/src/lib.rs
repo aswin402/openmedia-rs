@@ -1786,7 +1786,10 @@ pub async fn render_video_scene(
     }
 
     drop(stdin);
-    child.wait().await.map_err(OpenMediaError::IoError)?;
+    let status = child.wait().await.map_err(OpenMediaError::IoError)?;
+    if !status.success() {
+        return Err(OpenMediaError::Internal(format!("FFmpeg frame rendering failed with exit status {:?}", status.code())));
+    }
 
     // Mix audio if present
     if let Some(audio_cfg) = &scene.audio {
