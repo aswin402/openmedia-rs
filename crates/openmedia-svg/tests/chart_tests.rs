@@ -71,3 +71,16 @@ fn test_scatter_chart_generation() {
     let svg = openmedia_svg::create_chart("scatter", Some("Scatter Test"), &data, 800, 600).unwrap();
     assert!(svg.contains("<circle cx="));
 }
+
+#[test]
+fn test_radar_chart_generation() {
+    let data = vec![
+        openmedia_svg::ChartPoint { label: "A".to_string(), value: 80.0 },
+        openmedia_svg::ChartPoint { label: "B".to_string(), value: 60.0 },
+        openmedia_svg::ChartPoint { label: "C".to_string(), value: 90.0 },
+    ];
+    let svg = openmedia_svg::create_chart("radar", Some("Radar Test"), &data, 800, 600).unwrap();
+    assert!(svg.contains("Radar Test"));
+    assert!(svg.contains("<path d="));
+}
+

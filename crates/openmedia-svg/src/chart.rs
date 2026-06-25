@@ -377,6 +377,84 @@ pub fn create_chart(
                     .fill("#94a3b8").font_size(10.0).font_family("sans-serif").finish();
             }
         }
+        "radar" => {
+            let cx = width as f64 / 2.0;
+            let cy = height as f64 / 2.0 + 20.0;
+            let r = (width.min(height) as f64 * 0.7) / 2.0;
+
+            let max_val = data.iter().map(|p| p.value).fold(0.0f64, f64::max);
+            let max_val = if max_val <= 0.0 { 1.0 } else { max_val };
+            let n = data.len();
+
+            // Draw concentric grids (5 rings)
+            let ring_count = 5;
+            for i in 1..=ring_count {
+                let ratio = i as f64 / ring_count as f64;
+                let ring_r = r * ratio;
+                let mut grid_path = String::new();
+                
+                for j in 0..n {
+                    let angle = j as f64 * (2.0 * std::f64::consts::PI / n as f64) - std::f64::consts::FRAC_PI_2;
+                    let x = cx + ring_r * angle.cos();
+                    let y = cy + ring_r * angle.sin();
+                    if j == 0 {
+                        grid_path.push_str(&format!("M {} {}", x, y));
+                    } else {
+                        grid_path.push_str(&format!(" L {} {}", x, y));
+                    }
+                }
+                grid_path.push_str(" Z");
+                builder.path(&grid_path)
+                    .stroke("#333355").stroke_width(1.0).fill("none").finish();
+            }
+
+            // Draw spokes (lines from center to outer ring vertices)
+            let mut data_path = String::new();
+            for j in 0..n {
+                let angle = j as f64 * (2.0 * std::f64::consts::PI / n as f64) - std::f64::consts::FRAC_PI_2;
+                let outer_x = cx + r * angle.cos();
+                let outer_y = cy + r * angle.sin();
+                
+                builder.path(&format!("M {} {} L {} {}", cx, cy, outer_x, outer_y))
+                    .stroke("#333355").stroke_width(1.0).fill("none").finish();
+
+                // Labels
+                let label_dist = r + 20.0;
+                let label_x = cx + label_dist * angle.cos() - (data[j].label.len() as f64 * 3.0);
+                let label_y = cy + label_dist * angle.sin() + 4.0;
+                builder.text(label_x, label_y, &data[j].label)
+                    .fill("#94a3b8").font_size(11.0).font_family("sans-serif").finish();
+
+                // Data point coord
+                let val_r = r * (data[j].value / max_val);
+                let val_x = cx + val_r * angle.cos();
+                let val_y = cy + val_r * angle.sin();
+                
+                if j == 0 {
+                    data_path.push_str(&format!("M {} {}", val_x, val_y));
+                } else {
+                    data_path.push_str(&format!(" L {} {}", val_x, val_y));
+                }
+            }
+            data_path.push_str(" Z");
+
+            // Draw data polygon area
+            builder.path(&data_path)
+                .fill("#3b82f6").opacity(0.35).finish();
+            builder.path(&data_path)
+                .stroke("#3b82f6").stroke_width(2.5).fill("none").finish();
+
+            // Draw circles on data vertices
+            for j in 0..n {
+                let angle = j as f64 * (2.0 * std::f64::consts::PI / n as f64) - std::f64::consts::FRAC_PI_2;
+                let val_r = r * (data[j].value / max_val);
+                let val_x = cx + val_r * angle.cos();
+                let val_y = cy + val_r * angle.sin();
+                
+                builder.circle(val_x, val_y, 4.0)
+                    .fill("#ffffff").stroke("#3b82f6").stroke_width(2.0).finish();
+            }
+        }
         other => {
             return Err(OpenMediaError::InvalidParameter {
                 param: "chart_type".to_string(),
