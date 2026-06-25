@@ -17,10 +17,44 @@ The inspiration for OpenMedia-RS comes from:
 
 ---
 
-## ⚡ What We Have Done (v0.0.12 Audio Overlays for Video Templates)
-* **Audio Overlays in Video Templates (`video_from_template`)**: Integrated custom audio overlay configuration, supporting `"background_music"` (simple path shorthand) and `"audio_tracks"` (complex multi-track array with volume control, offsets, and fade effects) mixed natively during compilation.
-* **Pre-Designed Video Templates (`video_from_template`)**: Implemented matching and scene composition engines for `data_dashboard` (statistical charts, dark-themed title slides), `social_media` (vertical 9:16 layout format with slide-up content keyframes), and `product_showcase` (multi-scene image showcase with fade/slide animation timelines) templates.
-* **Custom Mermaid Styling & Theme Overrides (`diagram_generate_mermaid`)**: Extended the Mermaid diagram generator to support theme presets (`default`, `dark`, `forest`, `neutral`), custom layout spacing configurations, and custom JSON field styling overrides.
+## ⚡ What We Have Done (v0.0.15 Custom Template CRUD)
+* **Custom Video Template CRUD Tools (`template_*`)**: Added `template_create`, `template_read`, `template_update`, and `template_delete` MCP tools allowing AI agents to dynamically build, inspect, update, and delete customized reusable video templates.
+* **Dynamic Template Interpolation (`video_from_template`)**: Configured custom templates to read definitions from `assets/templates/`, interpolate variables (like colors, texts) with string placeholder substitutions, and render them in the video pipeline.
+* **Native Vector Chart Rendering Support**: Implemented proper data parsing and chart generation in `generate_chart` (in `openmedia-svg`), resolving a previous placeholder stub. Chart elements can now parse JSON data correctly and delegate to internal `create_chart` layouts.
+* **Custom Transition Easing & Duration Overrides**: Extended the transition engine to support customizable easing overrides (`linear`, `ease_in`, `ease_out`, `ease_in_out`, and case-insensitive matching). Allowed overriding default durations and easing in templates via JSON parameters (`transition_type`, `transition_duration`, `transition_easing`).
+* **Dynamic Font Loading & SVG Integration**: Added support for loading local `.ttf`/`.otf` files and downloading remote fonts. Configured `resvg`'s `fontdb` database dynamically in the frame rendering pipeline.
+* **High-Performance Font Caching**: Designed thread-safe caches for system font databases, HTML base64 CSS declarations, and transient download failures (with 60s TTL) to maximize video rendering frame rates.
+* **Telemetry Progress Isolation**: Configured a thread-safe `StderrProgressReporter` to emit per-byte streaming progress metrics directly to `stderr`, preserving the integrity of standard output (`stdout`) for clean MCP JSON-RPC stdio transport communication.
+* **Production Dockerization**: Set up a multi-stage production `Dockerfile` creating a lightweight Debian-slim container pre-configured with headless Chrome and FFmpeg runtime requirements.
+* **CI/CD & GitHub Actions Release Automation**: Added `.github/workflows/release.yml` with a cross-compilation pipeline matrix building and publishing optimized assets for Linux (x86_64), macOS (x86_64, aarch64), and Windows (x86_64) on tag pushes.
+* **Release Profile Optimizations**: Configured optimized release settings (`opt-level = 3`, LTO, codegen-units, panic abort, strip) inside the workspace [Cargo.toml](Cargo.toml) to minimize binary sizes and maximize speed.
+* **Model Download MCP Tool**: Registered the `model_download` tool over the stdio interface, enabling AI agents to pull models on-demand.
+* **Multi-Crate Workspace Architecture**: Created an 8-crate workspace spanning core engine, image, video, SVG, animate, process, quality improvement, and MCP server crates.
+* **Dyn Compatible Trait Architecture**: Annotated [DiffusionPipeline](crates/openmedia-image/src/lib.rs) and [FrameRenderer](crates/openmedia-video/src/lib.rs) with `#[async_trait]` to resolve compiler object safety blockers.
+* **JSON-RPC Stdio Loop**: Fully wired [OpenMediaServer](crates/openmedia-mcp/src/lib.rs) with the `rmcp` SDK macros (`#[tool_router(server_handler)]` and `#[tool]`), running completely over stdio transport.
+* **Layout-to-Image Engines**:
+  * **SVG Rasterizer (`rasterize_svg`)**: Powered by `resvg` + `tiny-skia` to convert SVG vector strings or files into PNG, JPEG, and WebP images on the CPU in $<20$ms.
+  * **HTML/CSS Snapshotter (`html_to_image`)**: Integrates `chromiumoxide` to launch headless Chrome, render complex web templates, and capture screenshots.
+* **SVG Animation Engine (`openmedia-animate`)**:
+  * **SMIL XML Writer**: Generates `<animate>`, `<animateTransform>`, `<animateMotion>`, `<set>` elements with target `href` links and duration/delay triggers.
+  * **CSS @keyframes Generator**: Handles keyframe percentages, target classes, iteration counts, fill modes, and animation shorthand.
+  * **Path Morphing**: Parses, equalizes vertex counts using collapse logic, and interpolates between two path data strings.
+  * **Sequencing Timeline**: Orchestrates sequential, parallel, and staggered animations by resolving absolute timings.
+  * **Lottie Converter**: Imports Lottie JSON and translates shape layers/keyframes into animated SVGs.
+* **Video Scene Composition Engine (`openmedia-video`)**:
+  * **JSON-based Scene DSL**: Parses and validates multi-track visual element layers (Text, Image, Shape, SVG, Chart, Code, HTML) and layouts.
+  * **Unified Compositor**: Layer-composites elements with alpha opacity/premultiplication correction on the CPU or handles complex layouts via headless Chromium rendering.
+  * **Transitions Blender**: Implements frame-level crossfades, slides, and wipes between scene clips.
+  * **Piped Video Encoder**: Encodes raw frame streams using an optimized FFmpeg pipe over stdin, outputting H.264/AAC MP4 files.
+  * **Audio Track Mixer**: Dynamically mixes background narration and music tracks with configurable offsets, volumes, and fade timings.
+* **Scoring & Self-Improvement System (`openmedia-improve`)**:
+  * **CLIP Scorer**: Computes cosine similarity between image and text embeddings using `ort` (ONNX Runtime) session execution with Lanczos3 image scaling and BPE tokenization.
+  * **Generation History Database**: Logs all tool outputs, request inputs, aesthetic scores, and generation parameters to a version-controlled SQLite database schema.
+  * **Prompt Refiner**: Applies quality-boosting modifier tokens and default defect-reducing negative prompts based on quality score feedback.
+  * **Iterative Refinement Loop**: Runs auto-refine feedback chains (generate → score → refine → rebuild) using fallback vector rendering.
+* **28 MCP Tools Registered**: Integrated 6 animation tools, 12 video and template tools, 5 quality self-improvement tools, model download, Mermaid diagram generation, and the new SVG canvas/chart/icon builder tools.
+* **Tested & Sandbox Verified**: Built robust unit and integration tests verifying MCP tool bindings, schema generation, image encoding, video compilation, transitions, audio mixing, history database inserts, prompt refinement, and registry model downloads. Tests pass cleanly with `cargo test --workspace`.
+* **Mermaid Integration Verification**: Verification suite includes native Mermaid parser output tests and rasterized diagram image format tests.
 * **Refined Lightweight Architecture**: Re-scoped the project to focus on a strictly lightweight vector rendering, diagram compilation, and layout animation engine (< 50MB RAM/ROM footprint). Bypassed heavy local AI diffusion models in favor of online LLM/multimodal agents acting as the visual code designers.
 * **JSON-to-SVG Canvas Engine (`openmedia-svg`)**: Implemented deserialization schema rules for structured canvas shapes (Rects, Circles, Texts) to compile JSON arrays into standard SVG vector markup natively.
 * **Custom Chart Engine (`create_chart`)**: Built vertical bars charting, smooth bezier curve plotting, and polar coordinates pie slice drawing (using arc paths) with configurable legend keys and titles.
@@ -81,6 +115,10 @@ OpenMedia-RS exposes the following Model Context Protocol (MCP) tools directly t
 * **`video_add_transition`** (Active 🟢): Adds scene transitions inside the DSL description.
 * **`video_add_audio`** (Active 🟢): Fuses audio tracks into existing video containers or JSON descriptions.
 * **`video_from_template`** (Active 🟢): Instantiates videos from prebuilt templates (supports `"background_music"` and `"audio_tracks"` overlays mixing).
+* **`template_create`** (Active 🟢): Save a new custom video scene template containing parameter placeholders.
+* **`template_read`** (Active 🟢): Read a specific custom template definition, or list all available custom and built-in templates.
+* **`template_update`** (Active 🟢): Update an existing custom template definition.
+* **`template_delete`** (Active 🟢): Delete a custom template definition.
 * **`video_extract_frames`** (Active 🟢): Extracts keyframe images from a video at specific time offsets.
 * **`video_trim`** (Active 🟢): Trims a video file to a specific time range.
 
