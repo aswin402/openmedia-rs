@@ -2206,6 +2206,142 @@ impl OpenMediaServer {
                         start,
                         end,
                         elements: vec![
+                            // Background Floating Circle 1
+                            openmedia_video::SceneElement::Shape {
+                                shape: openmedia_video::ShapeType::Circle,
+                                size: openmedia_video::Size {
+                                    width: openmedia_video::DimensionValue::Pixels(350.0),
+                                    height: openmedia_video::DimensionValue::Pixels(350.0),
+                                },
+                                position: openmedia_video::Position {
+                                    x: openmedia_video::DimensionValue::Pixels(100.0),
+                                    y: openmedia_video::DimensionValue::Pixels(300.0),
+                                },
+                                style: openmedia_video::ShapeStyle {
+                                    fill: Some("#312e81".to_string()),
+                                    stroke: None,
+                                    stroke_width: None,
+                                    border_radius: None,
+                                    opacity: Some(0.15),
+                                },
+                                timeline: Some(openmedia_video::ElementTimeline {
+                                    keyframes: vec![
+                                        openmedia_video::Keyframe {
+                                            time: 0.0,
+                                            opacity: Some(0.1),
+                                            x: Some("-50".to_string()),
+                                            y: Some("-30".to_string()),
+                                            scale: Some(0.8),
+                                            scale_x: None,
+                                            scale_y: None,
+                                            rotation: None,
+                                            easing: None,
+                                        },
+                                        openmedia_video::Keyframe {
+                                            time: duration,
+                                            opacity: Some(0.15),
+                                            x: Some("50".to_string()),
+                                            y: Some("30".to_string()),
+                                            scale: Some(1.2),
+                                            scale_x: None,
+                                            scale_y: None,
+                                            rotation: None,
+                                            easing: None,
+                                        },
+                                    ],
+                                }),
+                            },
+                            // Background Floating Circle 2
+                            openmedia_video::SceneElement::Shape {
+                                shape: openmedia_video::ShapeType::Circle,
+                                size: openmedia_video::Size {
+                                    width: openmedia_video::DimensionValue::Pixels(450.0),
+                                    height: openmedia_video::DimensionValue::Pixels(450.0),
+                                },
+                                position: openmedia_video::Position {
+                                    x: openmedia_video::DimensionValue::Pixels(800.0),
+                                    y: openmedia_video::DimensionValue::Pixels(1400.0),
+                                },
+                                style: openmedia_video::ShapeStyle {
+                                    fill: Some("#4c1d95".to_string()),
+                                    stroke: None,
+                                    stroke_width: None,
+                                    border_radius: None,
+                                    opacity: Some(0.12),
+                                },
+                                timeline: Some(openmedia_video::ElementTimeline {
+                                    keyframes: vec![
+                                        openmedia_video::Keyframe {
+                                            time: 0.0,
+                                            opacity: Some(0.12),
+                                            x: Some("40".to_string()),
+                                            y: Some("50".to_string()),
+                                            scale: Some(1.1),
+                                            scale_x: None,
+                                            scale_y: None,
+                                            rotation: None,
+                                            easing: None,
+                                        },
+                                        openmedia_video::Keyframe {
+                                            time: duration,
+                                            opacity: Some(0.08),
+                                            x: Some("-40".to_string()),
+                                            y: Some("-50".to_string()),
+                                            scale: Some(0.9),
+                                            scale_x: None,
+                                            scale_y: None,
+                                            rotation: None,
+                                            easing: None,
+                                        },
+                                    ],
+                                }),
+                            },
+                            // Card Container
+                            openmedia_video::SceneElement::Shape {
+                                shape: openmedia_video::ShapeType::RoundedRect,
+                                size: openmedia_video::Size {
+                                    width: openmedia_video::DimensionValue::Pixels(920.0),
+                                    height: openmedia_video::DimensionValue::Pixels(1000.0),
+                                },
+                                position: openmedia_video::Position {
+                                    x: openmedia_video::DimensionValue::Pixels(80.0),
+                                    y: openmedia_video::DimensionValue::Pixels(460.0),
+                                },
+                                style: openmedia_video::ShapeStyle {
+                                    fill: Some("#1e1b4b".to_string()),
+                                    stroke: Some("#fbbf24".to_string()),
+                                    stroke_width: Some(3.0),
+                                    border_radius: Some(24.0),
+                                    opacity: Some(0.85),
+                                },
+                                timeline: Some(openmedia_video::ElementTimeline {
+                                    keyframes: vec![
+                                        openmedia_video::Keyframe {
+                                            time: 0.0,
+                                            opacity: Some(0.0),
+                                            x: None,
+                                            y: None,
+                                            scale: Some(0.85),
+                                            scale_x: None,
+                                            scale_y: None,
+                                            rotation: None,
+                                            easing: Some("ease_out".to_string()),
+                                        },
+                                        openmedia_video::Keyframe {
+                                            time: 0.8,
+                                            opacity: Some(0.85),
+                                            x: None,
+                                            y: None,
+                                            scale: Some(1.0),
+                                            scale_x: None,
+                                            scale_y: None,
+                                            rotation: None,
+                                            easing: None,
+                                        },
+                                    ],
+                                }),
+                            },
+                            // Title text (positioned inside card space)
                             openmedia_video::SceneElement::Text {
                                 content: title.clone(),
                                 style: openmedia_video::TextStyle {
@@ -2219,11 +2355,37 @@ impl OpenMediaServer {
                                 },
                                 position: openmedia_video::Position {
                                     x: openmedia_video::DimensionValue::Pixels((width / 2) as f64),
-                                    y: openmedia_video::DimensionValue::Pixels(200.0),
+                                    y: openmedia_video::DimensionValue::Pixels(580.0),
                                 },
                                 anchor: openmedia_video::Anchor::Center,
-                                timeline: None,
+                                timeline: Some(openmedia_video::ElementTimeline {
+                                    keyframes: vec![
+                                        openmedia_video::Keyframe {
+                                            time: 0.2,
+                                            opacity: Some(0.0),
+                                            x: None,
+                                            y: Some("-20".to_string()),
+                                            scale: None,
+                                            scale_x: None,
+                                            scale_y: None,
+                                            rotation: None,
+                                            easing: Some("ease_out".to_string()),
+                                        },
+                                        openmedia_video::Keyframe {
+                                            time: 0.8,
+                                            opacity: Some(1.0),
+                                            x: None,
+                                            y: Some("0".to_string()),
+                                            scale: None,
+                                            scale_x: None,
+                                            scale_y: None,
+                                            rotation: None,
+                                            easing: None,
+                                        },
+                                    ],
+                                }),
                             },
+                            // Content text
                             openmedia_video::SceneElement::Text {
                                 content: point_text,
                                 style: openmedia_video::TextStyle {
@@ -2243,20 +2405,28 @@ impl OpenMediaServer {
                                 timeline: Some(openmedia_video::ElementTimeline {
                                     keyframes: vec![
                                         openmedia_video::Keyframe {
-                                            time: 0.0,
+                                            time: 0.4,
                                             opacity: Some(0.0),
-                                            x: None, y: Some("100".to_string()),
-                                            scale: None, scale_x: None, scale_y: None,
-                                            rotation: None, easing: Some("ease_out".to_string()),
+                                            x: None,
+                                            y: Some("50".to_string()),
+                                            scale: None,
+                                            scale_x: None,
+                                            scale_y: None,
+                                            rotation: None,
+                                            easing: Some("ease_out".to_string()),
                                         },
                                         openmedia_video::Keyframe {
-                                            time: 0.8,
+                                            time: 1.0,
                                             opacity: Some(1.0),
-                                            x: None, y: Some("0".to_string()),
-                                            scale: None, scale_x: None, scale_y: None,
-                                            rotation: None, easing: None,
-                                        }
-                                    ]
+                                            x: None,
+                                            y: Some("0".to_string()),
+                                            scale: None,
+                                            scale_x: None,
+                                            scale_y: None,
+                                            rotation: None,
+                                            easing: None,
+                                        },
+                                    ],
                                 }),
                             },
                         ],
