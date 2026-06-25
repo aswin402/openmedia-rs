@@ -1,0 +1,11 @@
+{
+  "timeline": {
+    "sequence": [
+      { "name": "particle_assemble", "start": 0.0, "duration": 2.0 },
+      { "name": "glow_pulse", "start": 2.0, "duration": 1.5 },
+      { "name": "path_draw", "start": 3.0, "duration": 1.5 },
+      { "name": "camera_push", "start": 4.0, "duration": 1.0 }
+    ],
+    "total_duration": 5.0
+  }
+}
