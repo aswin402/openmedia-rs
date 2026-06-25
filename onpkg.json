@@ -1,6 +1,8 @@
 {
   "agent_instructions": {
-    "active_skills": [],
+    "active_skills": [
+      "openmedia.md"
+    ],
     "docs_directory": "onpkg_docs/"
   },
   "architecture": {},

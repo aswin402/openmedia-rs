@@ -11,4 +11,4 @@ Use these documents to manage project progress, feature requests, and design ali
 - [Task Tracker (todo.md)](file://./todo.md)
 
 ## Technology Skills 🛠️
-No technology skills installed yet.
+- [OpenMedia-RS Generation Guidelines (openmedia.md)](file://./openmedia.md)
