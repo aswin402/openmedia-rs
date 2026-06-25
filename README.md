@@ -17,7 +17,8 @@ The inspiration for OpenMedia-RS comes from:
 
 ---
 
-## ⚡ What We Have Done (v0.0.15 Custom Template CRUD)
+## ⚡ What We Have Done (v0.0.16 Advanced Transitions & Charts)
+* **Advanced Transitions & Charts (v0.0.16)**: Added support for Blur (2-pass horizontal/vertical box filter), Glitch (RGB split displacement and scanline static noise), and Radial Wipe (clock-reveal boundary checks) transition blending natively in `openmedia-video`. Implemented Area (translucent filled polygon path), Scatter (coordinate circle markers), and Radar ( spiderweb grid spokes and polar paths) chart layout engines in `openmedia-svg`.
 * **Custom Video Template CRUD Tools (`template_*`)**: Added `template_create`, `template_read`, `template_update`, and `template_delete` MCP tools allowing AI agents to dynamically build, inspect, update, and delete customized reusable video templates.
 * **Dynamic Template Interpolation (`video_from_template`)**: Configured custom templates to read definitions from `assets/templates/`, interpolate variables (like colors, texts) with string placeholder substitutions, and render them in the video pipeline.
 * **Native Vector Chart Rendering Support**: Implemented proper data parsing and chart generation in `generate_chart` (in `openmedia-svg`), resolving a previous placeholder stub. Chart elements can now parse JSON data correctly and delegate to internal `create_chart` layouts.
@@ -165,13 +166,14 @@ OpenMedia-RS exposes the following Model Context Protocol (MCP) tools directly t
 
 ## ⚖️ Comparison to Other Tools
 
-| Dimension | OpenMedia-RS | Python Diffusers Suite | Remotion (Node.js) |
-| :--- | :--- | :--- | :--- |
-| **Runtime Size** | **~60MB** (Stripped release binary) | 5GB+ (PyTorch, virtualenv, CUDA libraries) | 500MB+ (Node modules + package) |
-| **Inference Path** | ONNX Runtime (`ort` for CLIP) & `wgpu` (compute) | PyTorch / Python Interpreter | N/A (Video rendering only) |
-| **Hardware Fit** | **Ultra-low-spec friendly** (Runs on CPU with SIMD fallback or GPU; <1GB memory footprint) | High-spec required (8GB+ VRAM typical) | Moderate (CPU-bound rendering) |
-| **MCP Integration**| **Native** (Built-in JSON-RPC stdio, 20+ tools) | Requires custom Python wrap scripts | Requires custom Node wrapper |
-| **Scope** | Layout-to-Image + SVG Animation + Video Scene DSL + GPU Image Filters + Telemetry Scoring | AI Image Generation Only | Programmatic Video Composition Only |
+| Dimension | OpenMedia-RS | Remotion (Node.js) | HeyGen Hyperframes | Python Diffusers Suite |
+| :--- | :--- | :--- | :--- | :--- |
+| **Runtime Size** | **~60MB** (Stripped release binary) | 500MB+ (Node modules + package) | 500MB+ (Node modules + package) | 5GB+ (PyTorch, virtualenv, CUDA libraries) |
+| **Tech Stack** | **Pure Rust** (resvg, tiny-skia, FFmpeg) | TypeScript, React, Puppeteer, FFmpeg | JavaScript, HTML/CSS, Headless Chrome | Python, PyTorch, Diffusers |
+| **Rendering Flow** | **Hybrid / Offline-first**: CPU Vector Engine (resvg) in $<20$ms; Headless Chromium only as opt-in | Headless Browser screenshotting (Puppeteer) | Headless Browser screenshotting (deterministic Chrome) | Deep Learning Diffusion execution |
+| **MCP Integration**| **Native** (Built-in JSON-RPC, 20+ tools) | Requires custom Node wrapper | Requires custom wrapper | Requires custom Python wrap scripts |
+| **Architecture** | Agent-native Model Context Protocol | Developer-centric React API | Agent-native HTML/CSS DSL | Deep Learning Models |
+| **Hardware Fit** | **Ultra-low-spec friendly** (<1GB RAM/ROM footprint, SIMD CPU fallback) | Moderate (CPU-bound) | Moderate (CPU-bound) | High-spec required (8GB+ VRAM typical) |
 
 ---
 

@@ -1962,6 +1962,9 @@ pub enum TransitionType {
     Dissolve,
     IrisIn,
     IrisOut,
+    Blur,
+    Glitch,
+    RadialWipe,
 }
 
 /// Audio configuration for a video
@@ -2287,6 +2290,7 @@ pub enum ChartType {
     Bar,
     Line,
     Pie,
+    Area,
     Scatter,
     Radar,
     Heatmap,

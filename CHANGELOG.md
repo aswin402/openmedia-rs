@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v0.0.16] - 2026-06-25
+
+### Added
+- **Advanced Transitions Engine**: Implemented Blur (2-pass horizontal/vertical box filter), Glitch (RGB scanline split channel displacement), and Radial Wipe (polar coordinate clocks reveal) natively in `openmedia-video`.
+- **Advanced Chart Types**: Added Area (translucent filled polygon path), Scatter (colored circle coordinates), and Radar (spiderweb grid spokes and polar path polygons) layout templates to `openmedia-svg`.
+- **Unified Presets Parsing in MCP**: Added string conversion presets mapping (e.g., `"blur"`, `"glitch"`, `"radial_wipe"`) to transition enum variants in the `openmedia-mcp` tool routes.
+- **Verification Coverage**: Expanded unit tests in all packages checking parsing, grid math, and blend buffers for charts and transitions.
+
 ## [v0.0.15] - 2026-06-25
 
 ### Added

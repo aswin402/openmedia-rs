@@ -420,6 +420,9 @@ Videos are defined as a JSON scene description with the following structure:
 | `dissolve`       | duration, grain_size              | Pixelated dissolve                            |
 | `iris_in`        | duration, center                  | Circular iris open                            |
 | `iris_out`       | duration, center                  | Circular iris close                           |
+| `blur`           | duration                          | Box blur blend between scenes                 |
+| `glitch`         | duration                          | RGB split horizontal scanline static glitch   |
+| `radial_wipe`    | duration                          | Clock-wise radial wipe reveal                 |
 | `none`           | —                                 | Hard cut                                      |
 
 #### 4.2.5 Image Slideshow Mode
