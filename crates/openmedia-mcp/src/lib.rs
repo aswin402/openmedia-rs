@@ -1458,7 +1458,7 @@ impl OpenMediaServer {
 
     #[tool(
         name = "video_create",
-        description = "Compile a video from a full VideoScene JSON description. Supports transitions and audio mixing."
+        description = "Compile a video from a full VideoScene JSON description. Supports transitions and audio mixing. DESIGN TIPS: Use native shapes, text, and charts for faster offline rendering. Define explicit keyframes for opacity/scale/rotation/position. Easing choices: linear, ease_in, ease_out, ease_in_out."
     )]
     pub async fn video_create(
         &self,
@@ -1866,7 +1866,7 @@ impl OpenMediaServer {
 
     #[tool(
         name = "video_from_template",
-        description = "Instantiate a video scene from one of the pre-designed templates (slideshow, text_explainer, data_dashboard, social_media, product_showcase)."
+        description = "Instantiate a video scene from one of the pre-designed templates (slideshow, text_explainer, data_dashboard, social_media, product_showcase). DESIGN TIPS: Use custom colors, charts, audio offsets, and customize transition easing (linear, ease_in, ease_out, ease_in_out)."
     )]
     pub async fn video_from_template(
         &self,
@@ -2914,7 +2914,7 @@ impl OpenMediaServer {
 
     #[tool(
         name = "create_svg",
-        description = "Generate a custom SVG layout from a list of JSON-defined shapes and primitives and save to output directory"
+        description = "Generate a custom SVG layout from a list of JSON-defined shapes and primitives and save to output directory. DESIGN TIPS: Use cohesive, non-primary color schemes (e.g. slate, teals, pastel gradients). Place text elements carefully and use relative or calculated coordinates."
     )]
     pub async fn create_svg(
         &self,
@@ -2962,7 +2962,7 @@ impl OpenMediaServer {
 
     #[tool(
         name = "create_chart",
-        description = "Generate a custom bar, line, or pie chart from a list of data points and save to output directory"
+        description = "Generate a custom bar, line, or pie chart from a list of data points and save to output directory. DESIGN TIPS: Match the theme ('dark' or 'light') to the parent scene. Maintain padding around margins (e.g. 50px-60px) to prevent label clipping."
     )]
     pub async fn create_chart(
         &self,
