@@ -1279,6 +1279,72 @@ pub fn apply_transition_easing(progress: f64, easing: Option<&str>) -> f64 {
     }
 }
 
+fn box_blur(img: &image::RgbaImage, radius: usize) -> image::RgbaImage {
+    let w = img.width();
+    let h = img.height();
+    let mut temp = image::RgbaImage::new(w, h);
+    let mut out = image::RgbaImage::new(w, h);
+    
+    // Pass 1: Horizontal
+    for y in 0..h {
+        for x in 0..w {
+            let mut r_sum = 0u32;
+            let mut g_sum = 0u32;
+            let mut b_sum = 0u32;
+            let mut a_sum = 0u32;
+            let mut count = 0u32;
+            
+            let start = if x as usize >= radius { x as usize - radius } else { 0 };
+            let end = std::cmp::min(x as usize + radius, w as usize - 1);
+            
+            for k in start..=end {
+                let p = img.get_pixel(k as u32, y);
+                r_sum += p[0] as u32;
+                g_sum += p[1] as u32;
+                b_sum += p[2] as u32;
+                a_sum += p[3] as u32;
+                count += 1;
+            }
+            temp.put_pixel(x, y, image::Rgba([
+                (r_sum / count) as u8,
+                (g_sum / count) as u8,
+                (b_sum / count) as u8,
+                (a_sum / count) as u8,
+            ]));
+        }
+    }
+    
+    // Pass 2: Vertical
+    for x in 0..w {
+        for y in 0..h {
+            let mut r_sum = 0u32;
+            let mut g_sum = 0u32;
+            let mut b_sum = 0u32;
+            let mut a_sum = 0u32;
+            let mut count = 0u32;
+            
+            let start = if y as usize >= radius { y as usize - radius } else { 0 };
+            let end = std::cmp::min(y as usize + radius, h as usize - 1);
+            
+            for k in start..=end {
+                let p = temp.get_pixel(x, k as u32);
+                r_sum += p[0] as u32;
+                g_sum += p[1] as u32;
+                b_sum += p[2] as u32;
+                a_sum += p[3] as u32;
+                count += 1;
+            }
+            out.put_pixel(x, y, image::Rgba([
+                (r_sum / count) as u8,
+                (g_sum / count) as u8,
+                (b_sum / count) as u8,
+                (a_sum / count) as u8,
+            ]));
+        }
+    }
+    out
+}
+
 // === Unified Video compiler and renderer ===
 pub fn blend_frames(
     from: &image::RgbaImage,
@@ -1377,6 +1443,107 @@ pub fn blend_frames(
             for y in 0..h {
                 for x in 0..w {
                     if x < boundary {
+                        out.put_pixel(x, y, *to.get_pixel(x, y));
+                    } else {
+                        out.put_pixel(x, y, *from.get_pixel(x, y));
+                    }
+                }
+            }
+        }
+        TransitionType::Blur => {
+            let intensity = 1.0 - (progress - 0.5).abs() * 2.0;
+            let radius = (intensity * 10.0).round() as usize;
+            if radius > 0 {
+                let blurred_from = box_blur(from, radius);
+                let blurred_to = box_blur(to, radius);
+                for y in 0..h {
+                    for x in 0..w {
+                        let p1 = blurred_from.get_pixel(x, y);
+                        let p2 = blurred_to.get_pixel(x, y);
+                        let r = (p1[0] as f64 * (1.0 - progress) + p2[0] as f64 * progress) as u8;
+                        let g = (p1[1] as f64 * (1.0 - progress) + p2[1] as f64 * progress) as u8;
+                        let b = (p1[2] as f64 * (1.0 - progress) + p2[2] as f64 * progress) as u8;
+                        let a = (p1[3] as f64 * (1.0 - progress) + p2[3] as f64 * progress) as u8;
+                        out.put_pixel(x, y, image::Rgba([r, g, b, a]));
+                    }
+                }
+            } else {
+                for y in 0..h {
+                    for x in 0..w {
+                        let p1 = from.get_pixel(x, y);
+                        let p2 = to.get_pixel(x, y);
+                        let r = (p1[0] as f64 * (1.0 - progress) + p2[0] as f64 * progress) as u8;
+                        let g = (p1[1] as f64 * (1.0 - progress) + p2[1] as f64 * progress) as u8;
+                        let b = (p1[2] as f64 * (1.0 - progress) + p2[2] as f64 * progress) as u8;
+                        let a = (p1[3] as f64 * (1.0 - progress) + p2[3] as f64 * progress) as u8;
+                        out.put_pixel(x, y, image::Rgba([r, g, b, a]));
+                    }
+                }
+            }
+        }
+        TransitionType::Glitch => {
+            let intensity = 1.0 - (progress - 0.5).abs() * 2.0;
+            let disp_max = (intensity * 15.0) as i32;
+            
+            for y in 0..h {
+                // scanline row displacement
+                let mut seed = y as u32 + (progress * 1000.0) as u32;
+                seed ^= seed << 13;
+                seed ^= seed >> 17;
+                seed ^= seed << 5;
+                
+                let offset_x = if seed % 100 < (intensity * 40.0) as u32 {
+                    ((seed % 31) as i32 - 15) * disp_max / 15
+                } else {
+                    0
+                };
+
+                for x in 0..w {
+                    let get_chan = |img: &image::RgbaImage, channel: usize, dx: i32| -> u8 {
+                        let target_x = std::cmp::max(0, std::cmp::min(w as i32 - 1, x as i32 + dx)) as u32;
+                        img.get_pixel(target_x, y)[channel]
+                    };
+
+                    // Read split channels from source
+                    let r1 = get_chan(from, 0, offset_x - 3);
+                    let g1 = get_chan(from, 1, offset_x);
+                    let b1 = get_chan(from, 2, offset_x + 3);
+                    let a1 = get_chan(from, 3, offset_x);
+
+                    // Read split channels from target
+                    let r2 = get_chan(to, 0, offset_x - 3);
+                    let g2 = get_chan(to, 1, offset_x);
+                    let b2 = get_chan(to, 2, offset_x + 3);
+                    let a2 = get_chan(to, 3, offset_x);
+
+                    // Blend channels
+                    let mut r = (r1 as f64 * (1.0 - progress) + r2 as f64 * progress) as i32;
+                    let mut g = (g1 as f64 * (1.0 - progress) + g2 as f64 * progress) as i32;
+                    let mut b = (b1 as f64 * (1.0 - progress) + b2 as f64 * progress) as i32;
+                    let a = (a1 as f64 * (1.0 - progress) + a2 as f64 * progress) as u8;
+
+                    // Add a touch of noise/static
+                    if intensity > 0.1 && (seed % 97) == 0 {
+                        let noise = ((seed % 51) as i32 - 25) * (intensity * 2.0) as i32;
+                        r = std::cmp::max(0, std::cmp::min(255, r + noise));
+                        g = std::cmp::max(0, std::cmp::min(255, g + noise));
+                        b = std::cmp::max(0, std::cmp::min(255, b + noise));
+                    }
+
+                    out.put_pixel(x, y, image::Rgba([r as u8, g as u8, b as u8, a]));
+                }
+            }
+        }
+        TransitionType::RadialWipe => {
+            let cx = w as f64 / 2.0;
+            let cy = h as f64 / 2.0;
+            for y in 0..h {
+                for x in 0..w {
+                    let dx = x as f64 - cx;
+                    let dy = y as f64 - cy;
+                    let angle = dy.atan2(dx) + std::f64::consts::PI; // [0, 2*PI]
+                    let angle_ratio = angle / (2.0 * std::f64::consts::PI);
+                    if angle_ratio < progress {
                         out.put_pixel(x, y, *to.get_pixel(x, y));
                     } else {
                         out.put_pixel(x, y, *from.get_pixel(x, y));
@@ -1853,5 +2020,20 @@ mod tests {
         // Get CSS again, should be a cache hit
         let css2 = get_html_font_css(&[spec]).await;
         assert_eq!(css1, css2);
+    }
+
+    #[test]
+    fn test_advanced_transitions_blend() {
+        let from = image::RgbaImage::from_pixel(100, 100, image::Rgba([255, 0, 0, 255]));
+        let to = image::RgbaImage::from_pixel(100, 100, image::Rgba([0, 0, 255, 255]));
+
+        let blended_blur = blend_frames(&from, &to, 0.5, &TransitionType::Blur);
+        assert_eq!(blended_blur.width(), 100);
+
+        let blended_glitch = blend_frames(&from, &to, 0.5, &TransitionType::Glitch);
+        assert_eq!(blended_glitch.width(), 100);
+
+        let blended_radial = blend_frames(&from, &to, 0.5, &TransitionType::RadialWipe);
+        assert_eq!(blended_radial.width(), 100);
     }
 }
