@@ -3337,6 +3337,7 @@ dependencies = [
 name = "openmedia-mcp"
 version = "0.0.16"
 dependencies = [
+ "base64",
  "chrono",
  "image",
  "mermaid-rs-renderer",

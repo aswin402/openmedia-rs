@@ -797,6 +797,7 @@ fn render_element_to_svg(el: &SceneElement, t: f64, total_w: f64, total_h: f64) 
 // === Browser Frame Renderer (CDP Headless Chrome) ===
 pub struct BrowserFrameRenderer {
     browser: Browser,
+    page: tokio::sync::Mutex<chromiumoxide::page::Page>,
 }
 
 impl BrowserFrameRenderer {
@@ -811,13 +812,18 @@ impl BrowserFrameRenderer {
         tokio::spawn(async move {
             while let Some(h) = handler.next().await {
                 if let Err(err) = h {
-                    tracing::error!("BrowserFrameRenderer loop error: {:?}", err);
-                    break;
+                    tracing::warn!("BrowserFrameRenderer loop error: {:?}", err);
                 }
             }
         });
 
-        Ok(Self { browser })
+        let page = browser.new_page("about:blank").await
+            .map_err(|e| OpenMediaError::Internal(e.to_string()))?;
+
+        Ok(Self {
+            browser,
+            page: tokio::sync::Mutex::new(page),
+        })
     }
 
     pub async fn close(mut self) {
@@ -836,8 +842,7 @@ impl FrameRenderer for BrowserFrameRenderer {
     ) -> Result<image::RgbaImage> {
         let html_content = compile_scene_to_html(scene, time, width, height).await?;
         
-        let page = self.browser.new_page("about:blank").await
-            .map_err(|e| OpenMediaError::Internal(e.to_string()))?;
+        let page = self.page.lock().await;
             
         let params = chromiumoxide::cdp::browser_protocol::emulation::SetDeviceMetricsOverrideParams::builder()
             .width(width as i64)
@@ -859,8 +864,6 @@ impl FrameRenderer for BrowserFrameRenderer {
         let screenshot_bytes = page.screenshot(params).await
             .map_err(|e| OpenMediaError::Internal(e.to_string()))?;
             
-        let _ = page.close().await;
-
         let img = image::load_from_memory(&screenshot_bytes)
             .map_err(|e| OpenMediaError::ImageDecodeError(e.to_string()))?
             .to_rgba8();
@@ -1003,18 +1006,56 @@ async fn compile_scene_to_html(scene: &VideoScene, time: f64, width: u32, height
             };
             
             html.push_str(&format!(
-                r#"<div style="position: absolute; width: 100%; height: 100%; {}">{}</div>"#,
-                from_style, from_html
+                r#"<div data-scene-time="{}" style="position: absolute; width: 100%; height: 100%; {}">{}</div>"#,
+                time - s_from.start, from_style, from_html
             ));
             html.push_str(&format!(
-                r#"<div style="position: absolute; width: 100%; height: 100%; {}">{}</div>"#,
-                to_style, to_html
+                r#"<div data-scene-time="{}" style="position: absolute; width: 100%; height: 100%; {}">{}</div>"#,
+                time - s_to.start, to_style, to_html
             ));
         }
     } else if let Some(s) = active_scene {
         let content = render_scene_elements_to_html(s, time - s.start, width, height)?;
-        html.push_str(&content);
+        html.push_str(&format!(
+            r#"<div data-scene-time="{}" style="position: absolute; width: 100%; height: 100%;">{}</div>"#,
+            time - s.start, content
+        ));
     }
+
+    // Inject animation controller script to sync CSS @keyframes animations
+    let animation_js = format!(
+        r#"<script>
+(function() {{
+  const els = document.querySelectorAll('*');
+  for (const el of els) {{
+    const style = window.getComputedStyle(el);
+    const animationName = style.animationName;
+    if (animationName && animationName !== 'none') {{
+      const parentWithTime = el.closest('[data-scene-time]');
+      const time = parentWithTime ? parseFloat(parentWithTime.getAttribute('data-scene-time')) : {};
+      let origDelay = parseFloat(el.getAttribute('data-orig-delay'));
+      if (isNaN(origDelay)) {{
+        const delayStr = style.animationDelay;
+        origDelay = 0.0;
+        if (delayStr) {{
+          if (delayStr.endsWith('ms')) {{
+            origDelay = parseFloat(delayStr) / 1000.0;
+          }} else if (delayStr.endsWith('s')) {{
+            origDelay = parseFloat(delayStr);
+          }}
+        }}
+        el.setAttribute('data-orig-delay', origDelay);
+      }}
+      const newDelay = origDelay - time;
+      el.style.setProperty('animation-delay', newDelay + 's', 'important');
+      el.style.setProperty('animation-play-state', 'paused', 'important');
+    }}
+  }}
+}})();
+</script>"#,
+        time
+    );
+    html.push_str(&animation_js);
 
     html.push_str("</body></html>");
     Ok(html)

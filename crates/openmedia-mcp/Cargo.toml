@@ -25,6 +25,7 @@ schemars = "1"
 thiserror = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+base64 = "0.22"
 
 # MCP SDK
 rmcp = { version = "1.7.0", features = ["server", "transport-io", "macros"] }
