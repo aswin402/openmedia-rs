@@ -386,9 +386,8 @@ async fn main() {
                     ],
                 }),
             },
-            // PIE CHART
             SceneElement::Chart {
-                chart_type: "pie".to_string(),
+                chart_type: "radar".to_string(),
                 data: serde_json::json!([
                     { "label": "Charts", "value": 35.0 },
                     { "label": "Flows", "value": 45.0 },
@@ -611,9 +610,9 @@ async fn main() {
                     ],
                 }),
             },
-            // BAR CHART SHOWING PERFORMANCE
+            // AREA CHART SHOWING PERFORMANCE
             SceneElement::Chart {
-                chart_type: "bar".to_string(),
+                chart_type: "area".to_string(),
                 data: serde_json::json!([
                     { "label": "1 Thread", "value": 1.0 },
                     { "label": "4 Threads", "value": 3.4 },
@@ -1092,21 +1091,21 @@ async fn main() {
         SceneTransition {
             from: "slide_0".to_string(),
             to: "slide_1".to_string(),
-            transition_type: TransitionType::Crossfade,
+            transition_type: TransitionType::Blur,
             duration: 0.5,
             easing: Some("ease_in_out".to_string()),
         },
         SceneTransition {
             from: "slide_1".to_string(),
             to: "slide_2".to_string(),
-            transition_type: TransitionType::SlideLeft,
+            transition_type: TransitionType::Glitch,
             duration: 0.5,
             easing: Some("ease_in_out".to_string()),
         },
         SceneTransition {
             from: "slide_2".to_string(),
             to: "slide_3".to_string(),
-            transition_type: TransitionType::SlideRight,
+            transition_type: TransitionType::RadialWipe,
             duration: 0.5,
             easing: Some("ease_in_out".to_string()),
         },
