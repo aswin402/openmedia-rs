@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v0.0.17] - 2026-06-26
+
+### Fixed
+- **RMCP Compatibility & Output Schema Validation**:
+  - Introduced a custom `McpObject` wrapper implementing `schemars::JsonSchema` to force a root `"type": "object"` schema signature, preventing runtime panics in strict MCP clients (e.g. RMCP client schema assertions).
+  - Updated all tool registration routes, request/response handlers, and integration tests to use `McpObject` instead of generic `serde_json::Value`.
+
 ## [v0.0.16] - 2026-06-25
 
 ### Added

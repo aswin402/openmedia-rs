@@ -28,7 +28,7 @@ async fn test_mcp_image_processing_tools() {
         parameter: None,
     });
     let res = server.image_apply_filter(filter_params).await.unwrap();
-    let out: openmedia_core::ImageOutput = serde_json::from_value(res.0).unwrap();
+    let out: openmedia_core::ImageOutput = serde_json::from_value(res.0.into()).unwrap();
     assert_eq!(out.width, 32);
     assert_eq!(out.height, 32);
     assert!(out.path.exists());
@@ -41,7 +41,7 @@ async fn test_mcp_image_processing_tools() {
         algorithm: Some("nearest".to_string()),
     });
     let res = server.image_resize(resize_params).await.unwrap();
-    let out: openmedia_core::ImageOutput = serde_json::from_value(res.0).unwrap();
+    let out: openmedia_core::ImageOutput = serde_json::from_value(res.0.into()).unwrap();
     assert_eq!(out.width, 16);
     assert_eq!(out.height, 16);
     assert!(out.path.exists());
@@ -55,7 +55,7 @@ async fn test_mcp_image_processing_tools() {
         height: 10,
     });
     let res = server.image_crop(crop_params).await.unwrap();
-    let out: openmedia_core::ImageOutput = serde_json::from_value(res.0).unwrap();
+    let out: openmedia_core::ImageOutput = serde_json::from_value(res.0.into()).unwrap();
     assert_eq!(out.width, 10);
     assert_eq!(out.height, 10);
     assert!(out.path.exists());
@@ -67,7 +67,7 @@ async fn test_mcp_image_processing_tools() {
         angle: Some(90.0),
     });
     let res = server.image_transform(transform_params).await.unwrap();
-    let out: openmedia_core::ImageOutput = serde_json::from_value(res.0).unwrap();
+    let out: openmedia_core::ImageOutput = serde_json::from_value(res.0.into()).unwrap();
     // Rotating 32x32 yields 32x32
     assert_eq!(out.width, 32);
     assert_eq!(out.height, 32);
@@ -80,7 +80,7 @@ async fn test_mcp_image_processing_tools() {
         quality: Some(85),
     });
     let res = server.image_convert(convert_params).await.unwrap();
-    let out: openmedia_core::ImageOutput = serde_json::from_value(res.0).unwrap();
+    let out: openmedia_core::ImageOutput = serde_json::from_value(res.0.into()).unwrap();
     assert_eq!(out.format, "jpeg");
     assert!(out.path.exists());
 
@@ -92,7 +92,7 @@ async fn test_mcp_image_processing_tools() {
         output_dir: batch_output_dir.to_str().unwrap().to_string(),
     });
     let res = server.image_batch_process(batch_params).await.unwrap();
-    let outs: Vec<openmedia_core::ImageOutput> = serde_json::from_value(res.0).unwrap();
+    let outs: Vec<openmedia_core::ImageOutput> = serde_json::from_value(res.0.into()).unwrap();
     assert!(!outs.is_empty());
     assert!(outs[0].path.exists());
 }

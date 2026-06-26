@@ -11,6 +11,41 @@ use schemars::JsonSchema;
 use openmedia_video::{VideoScene, SceneElement, FrameRenderer};
 
 /// Main MCP server for OpenMedia
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[serde(transparent)]
+pub struct McpObject(pub serde_json::Value);
+
+impl schemars::JsonSchema for McpObject {
+    fn schema_name() -> std::borrow::Cow<'static, str> {
+        std::borrow::Cow::Borrowed("McpObject")
+    }
+
+    fn json_schema(_gen: &mut schemars::SchemaGenerator) -> schemars::Schema {
+        <schemars::Schema as std::convert::TryFrom<serde_json::Value>>::try_from(
+            serde_json::json!({ "type": "object" })
+        ).unwrap()
+    }
+}
+
+impl std::ops::Deref for McpObject {
+    type Target = serde_json::Value;
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl std::ops::DerefMut for McpObject {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
+impl From<McpObject> for serde_json::Value {
+    fn from(val: McpObject) -> Self {
+        val.0
+    }
+}
+
 #[derive(Clone)]
 pub struct OpenMediaServer {
     pub config: Arc<Config>,
@@ -680,7 +715,7 @@ impl OpenMediaServer {
     pub async fn model_download(
         &self,
         params: Parameters<ModelDownloadRequest>,
-    ) -> Result<Json<serde_json::Value>, String> {
+    ) -> Result<Json<McpObject>, String> {
         let req = params.0;
         let reporter = openmedia_core::StderrProgressReporter::new(req.id.clone());
         
@@ -694,7 +729,7 @@ impl OpenMediaServer {
             "path": path.to_string_lossy(),
         });
 
-        Ok(Json(response))
+        Ok(Json(McpObject(response)))
     }
 
     #[tool(
@@ -704,7 +739,7 @@ impl OpenMediaServer {
     pub async fn rasterize_svg(
         &self,
         params: Parameters<RasterizeSvgRequest>,
-    ) -> Result<Json<serde_json::Value>, String> {
+    ) -> Result<Json<McpObject>, String> {
         let req = params.0;
         let format = req.output_format.unwrap_or_else(|| "png".to_string());
         let filename = format!("{}.{}", uuid::Uuid::now_v7(), format);
@@ -733,7 +768,7 @@ impl OpenMediaServer {
         ).map_err(|e| e.to_string())?;
 
         serde_json::to_value(output)
-            .map(Json)
+            .map(McpObject).map(Json)
             .map_err(|e| e.to_string())
     }
 
@@ -744,7 +779,7 @@ impl OpenMediaServer {
     pub async fn diagram_generate_mermaid(
         &self,
         params: Parameters<GenerateMermaidRequest>,
-    ) -> Result<Json<serde_json::Value>, String> {
+    ) -> Result<Json<McpObject>, String> {
         let req = params.0;
         let format = req.output_format.clone().unwrap_or_else(|| "svg".to_string());
         let clean_format = format.trim().to_lowercase();
@@ -818,7 +853,7 @@ impl OpenMediaServer {
         };
         
         serde_json::to_value(output)
-            .map(Json)
+            .map(McpObject).map(Json)
             .map_err(|e| e.to_string())
     }
 
@@ -829,7 +864,7 @@ impl OpenMediaServer {
     pub async fn html_to_image(
         &self,
         params: Parameters<HtmlToImageRequest>,
-    ) -> Result<Json<serde_json::Value>, String> {
+    ) -> Result<Json<McpObject>, String> {
         let req = params.0;
         let format = req.output_format.unwrap_or_else(|| "png".to_string());
         let filename = format!("{}.{}", uuid::Uuid::now_v7(), format);
@@ -847,7 +882,7 @@ impl OpenMediaServer {
         ).await.map_err(|e| e.to_string())?;
 
         serde_json::to_value(output)
-            .map(Json)
+            .map(McpObject).map(Json)
             .map_err(|e| e.to_string())
     }
 
@@ -858,7 +893,7 @@ impl OpenMediaServer {
     pub async fn animate_svg(
         &self,
         params: Parameters<AnimateSvgRequest>,
-    ) -> Result<Json<serde_json::Value>, String> {
+    ) -> Result<Json<McpObject>, String> {
         use openmedia_animate::*;
         let req = params.0;
         let svg_content = if req.svg.trim().starts_with('<') {
@@ -930,7 +965,7 @@ impl OpenMediaServer {
         };
 
         serde_json::to_value(result)
-            .map(Json)
+            .map(McpObject).map(Json)
             .map_err(|e| e.to_string())
     }
 
@@ -941,7 +976,7 @@ impl OpenMediaServer {
     pub async fn animate_create_timeline(
         &self,
         params: Parameters<AnimateTimelineRequest>,
-    ) -> Result<Json<serde_json::Value>, String> {
+    ) -> Result<Json<McpObject>, String> {
         use openmedia_animate::*;
         let req = params.0;
         let svg_content = if req.svg.trim().starts_with('<') {
@@ -1022,7 +1057,7 @@ impl OpenMediaServer {
         };
 
         serde_json::to_value(result)
-            .map(Json)
+            .map(McpObject).map(Json)
             .map_err(|e| e.to_string())
     }
 
@@ -1033,7 +1068,7 @@ impl OpenMediaServer {
     pub async fn animate_morph_paths(
         &self,
         params: Parameters<AnimateMorphRequest>,
-    ) -> Result<Json<serde_json::Value>, String> {
+    ) -> Result<Json<McpObject>, String> {
         let req = params.0;
         let duration = req.duration.unwrap_or(3.0);
         let easing = parse_easing(req.easing.as_deref());
@@ -1071,7 +1106,7 @@ impl OpenMediaServer {
         };
 
         serde_json::to_value(result)
-            .map(Json)
+            .map(McpObject).map(Json)
             .map_err(|e| e.to_string())
     }
 
@@ -1082,7 +1117,7 @@ impl OpenMediaServer {
     pub async fn animate_generate_spinner(
         &self,
         params: Parameters<GenerateSpinnerRequest>,
-    ) -> Result<Json<serde_json::Value>, String> {
+    ) -> Result<Json<McpObject>, String> {
         let req = params.0;
         let color = req.color.unwrap_or_else(|| "#8b5cf6".to_string());
         let size = req.size.unwrap_or(60);
@@ -1169,7 +1204,7 @@ impl OpenMediaServer {
         };
 
         serde_json::to_value(result)
-            .map(Json)
+            .map(McpObject).map(Json)
             .map_err(|e| e.to_string())
     }
 
@@ -1180,7 +1215,7 @@ impl OpenMediaServer {
     pub async fn animate_from_lottie(
         &self,
         params: Parameters<LottieToSvgRequest>,
-    ) -> Result<Json<serde_json::Value>, String> {
+    ) -> Result<Json<McpObject>, String> {
         let req = params.0;
         let lottie_json = if req.lottie_json.trim().starts_with('{') {
             req.lottie_json
@@ -1217,7 +1252,7 @@ impl OpenMediaServer {
         };
 
         serde_json::to_value(result)
-            .map(Json)
+            .map(McpObject).map(Json)
             .map_err(|e| e.to_string())
     }
 
@@ -1228,7 +1263,7 @@ impl OpenMediaServer {
     pub async fn animate_to_lottie(
         &self,
         params: Parameters<SvgToLottieRequest>,
-    ) -> Result<Json<serde_json::Value>, String> {
+    ) -> Result<Json<McpObject>, String> {
         let req = params.0;
         let svg_content = if req.svg.trim().starts_with('<') {
             req.svg
@@ -1247,7 +1282,7 @@ impl OpenMediaServer {
         let lottie_val: serde_json::Value = serde_json::from_str(&lottie_json_str)
             .map_err(|e| e.to_string())?;
 
-        Ok(Json(lottie_val))
+        Ok(Json(McpObject(lottie_val)))
     }
 
     async fn process_and_save(
@@ -1311,7 +1346,7 @@ impl OpenMediaServer {
     pub async fn image_apply_filter(
         &self,
         params: Parameters<ImageApplyFilterRequest>,
-    ) -> Result<Json<serde_json::Value>, String> {
+    ) -> Result<Json<McpObject>, String> {
         let req = params.0;
         let img = image::open(&req.image_path).map_err(|e| e.to_string())?;
         let op = match req.filter_type.to_lowercase().as_str() {
@@ -1331,7 +1366,7 @@ impl OpenMediaServer {
         };
         let ext = std::path::Path::new(&req.image_path).extension().and_then(|e| e.to_str()).unwrap_or("png");
         let output = self.process_and_save(&img, &op, ext).await?;
-        serde_json::to_value(output).map(Json).map_err(|e| e.to_string())
+        serde_json::to_value(output).map(McpObject).map(Json).map_err(|e| e.to_string())
     }
 
     #[tool(
@@ -1341,7 +1376,7 @@ impl OpenMediaServer {
     pub async fn image_resize(
         &self,
         params: Parameters<ImageResizeRequest>,
-    ) -> Result<Json<serde_json::Value>, String> {
+    ) -> Result<Json<McpObject>, String> {
         let req = params.0;
         let img = image::open(&req.image_path).map_err(|e| e.to_string())?;
         let method = match req.algorithm.as_deref().unwrap_or("bilinear").to_lowercase().as_str() {
@@ -1357,7 +1392,7 @@ impl OpenMediaServer {
         };
         let ext = std::path::Path::new(&req.image_path).extension().and_then(|e| e.to_str()).unwrap_or("png");
         let output = self.process_and_save(&img, &op, ext).await?;
-        serde_json::to_value(output).map(Json).map_err(|e| e.to_string())
+        serde_json::to_value(output).map(McpObject).map(Json).map_err(|e| e.to_string())
     }
 
     #[tool(
@@ -1367,7 +1402,7 @@ impl OpenMediaServer {
     pub async fn image_crop(
         &self,
         params: Parameters<ImageCropRequest>,
-    ) -> Result<Json<serde_json::Value>, String> {
+    ) -> Result<Json<McpObject>, String> {
         let req = params.0;
         let img = image::open(&req.image_path).map_err(|e| e.to_string())?;
         let op = openmedia_process::ProcessOperation::Crop {
@@ -1378,7 +1413,7 @@ impl OpenMediaServer {
         };
         let ext = std::path::Path::new(&req.image_path).extension().and_then(|e| e.to_str()).unwrap_or("png");
         let output = self.process_and_save(&img, &op, ext).await?;
-        serde_json::to_value(output).map(Json).map_err(|e| e.to_string())
+        serde_json::to_value(output).map(McpObject).map(Json).map_err(|e| e.to_string())
      }
 
     #[tool(
@@ -1388,7 +1423,7 @@ impl OpenMediaServer {
     pub async fn image_transform(
         &self,
         params: Parameters<ImageTransformRequest>,
-    ) -> Result<Json<serde_json::Value>, String> {
+    ) -> Result<Json<McpObject>, String> {
         let req = params.0;
         let img = image::open(&req.image_path).map_err(|e| e.to_string())?;
         let op = match req.transform_type.to_lowercase().as_str() {
@@ -1402,7 +1437,7 @@ impl OpenMediaServer {
         };
         let ext = std::path::Path::new(&req.image_path).extension().and_then(|e| e.to_str()).unwrap_or("png");
         let output = self.process_and_save(&img, &op, ext).await?;
-        serde_json::to_value(output).map(Json).map_err(|e| e.to_string())
+        serde_json::to_value(output).map(McpObject).map(Json).map_err(|e| e.to_string())
     }
 
     #[tool(
@@ -1412,7 +1447,7 @@ impl OpenMediaServer {
     pub async fn image_convert(
         &self,
         params: Parameters<ImageConvertRequest>,
-    ) -> Result<Json<serde_json::Value>, String> {
+    ) -> Result<Json<McpObject>, String> {
         let req = params.0;
         let img = image::open(&req.image_path).map_err(|e| e.to_string())?;
         let start = std::time::Instant::now();
@@ -1446,7 +1481,7 @@ impl OpenMediaServer {
             generation_time: start.elapsed().as_secs_f64(),
         };
 
-        serde_json::to_value(output).map(Json).map_err(|e| e.to_string())
+        serde_json::to_value(output).map(McpObject).map(Json).map_err(|e| e.to_string())
     }
 
     #[tool(
@@ -1456,7 +1491,7 @@ impl OpenMediaServer {
     pub async fn image_batch_process(
         &self,
         params: Parameters<ImageBatchProcessRequest>,
-    ) -> Result<Json<serde_json::Value>, String> {
+    ) -> Result<Json<McpObject>, String> {
         let req = params.0;
         let mut chain = openmedia_process::FilterChain::new();
         for op_val in req.operations {
@@ -1489,7 +1524,7 @@ impl OpenMediaServer {
             }
         }).collect();
 
-        serde_json::to_value(outputs).map(Json).map_err(|e| e.to_string())
+        serde_json::to_value(outputs).map(McpObject).map(Json).map_err(|e| e.to_string())
     }
 
     #[tool(
@@ -1499,7 +1534,7 @@ impl OpenMediaServer {
     pub async fn video_create(
         &self,
         params: Parameters<VideoCreateRequest>,
-    ) -> Result<Json<serde_json::Value>, String> {
+    ) -> Result<Json<McpObject>, String> {
         let req = params.0;
         let scene: VideoScene = if req.scene.is_string() {
             let path_str = req.scene.as_str().unwrap();
@@ -1528,7 +1563,7 @@ impl OpenMediaServer {
             .map_err(|e| e.to_string())?;
 
         serde_json::to_value(video_spec)
-            .map(Json)
+            .map(McpObject).map(Json)
             .map_err(|e| e.to_string())
     }
 
@@ -1539,7 +1574,7 @@ impl OpenMediaServer {
     pub async fn video_preview(
         &self,
         params: Parameters<VideoPreviewRequest>,
-    ) -> Result<Json<serde_json::Value>, String> {
+    ) -> Result<Json<McpObject>, String> {
         let req = params.0;
         let scene: VideoScene = if req.scene.is_string() {
             let path_str = req.scene.as_str().unwrap();
@@ -1607,7 +1642,7 @@ impl OpenMediaServer {
         };
 
         serde_json::to_value(output)
-            .map(Json)
+            .map(McpObject).map(Json)
             .map_err(|e| e.to_string())
     }
 
@@ -1618,7 +1653,7 @@ impl OpenMediaServer {
     pub async fn video_create_slideshow(
         &self,
         params: Parameters<VideoCreateSlideshowRequest>,
-    ) -> Result<Json<serde_json::Value>, String> {
+    ) -> Result<Json<McpObject>, String> {
         let req = params.0;
         let duration_per_image = req.duration_per_image.unwrap_or(3.0);
         let trans_type_str = req.transition_type.unwrap_or_else(|| "crossfade".to_string());
@@ -1741,7 +1776,7 @@ impl OpenMediaServer {
             .map_err(|e| e.to_string())?;
 
         serde_json::to_value(video_spec)
-            .map(Json)
+            .map(McpObject).map(Json)
             .map_err(|e| e.to_string())
     }
 
@@ -1752,7 +1787,7 @@ impl OpenMediaServer {
     pub async fn video_add_transition(
         &self,
         params: Parameters<VideoAddTransitionRequest>,
-    ) -> Result<Json<serde_json::Value>, String> {
+    ) -> Result<Json<McpObject>, String> {
         let req = params.0;
         let path = std::path::Path::new(&req.scene_path);
         if !path.exists() || !path.is_file() {
@@ -1779,7 +1814,7 @@ impl OpenMediaServer {
         std::fs::write(path, updated).map_err(|e| e.to_string())?;
 
         serde_json::to_value(scene)
-            .map(Json)
+            .map(McpObject).map(Json)
             .map_err(|e| e.to_string())
     }
 
@@ -1790,7 +1825,7 @@ impl OpenMediaServer {
     pub async fn video_add_audio(
         &self,
         params: Parameters<VideoAddAudioRequest>,
-    ) -> Result<Json<serde_json::Value>, String> {
+    ) -> Result<Json<McpObject>, String> {
         let req = params.0;
         let target = std::path::Path::new(&req.target_path);
         if !target.exists() {
@@ -1822,7 +1857,7 @@ impl OpenMediaServer {
             std::fs::write(target, updated).map_err(|e| e.to_string())?;
 
             return serde_json::to_value(scene)
-                .map(Json)
+                .map(McpObject).map(Json)
                 .map_err(|e| e.to_string());
         }
 
@@ -1876,7 +1911,7 @@ impl OpenMediaServer {
         };
 
         serde_json::to_value(output)
-            .map(Json)
+            .map(McpObject).map(Json)
             .map_err(|e| e.to_string())
     }
 
@@ -1887,7 +1922,7 @@ impl OpenMediaServer {
     pub async fn video_from_template(
         &self,
         params: Parameters<VideoFromTemplateRequest>,
-    ) -> Result<Json<serde_json::Value>, String> {
+    ) -> Result<Json<McpObject>, String> {
         let req = params.0;
         let output_path = if let Some(out_p) = req.output_path {
             std::path::PathBuf::from(out_p)
@@ -2713,7 +2748,7 @@ impl OpenMediaServer {
             .map_err(|e| e.to_string())?;
 
         serde_json::to_value(video_spec)
-            .map(Json)
+            .map(McpObject).map(Json)
             .map_err(|e| e.to_string())
     }
 
@@ -2724,7 +2759,7 @@ impl OpenMediaServer {
     pub async fn video_extract_frames(
         &self,
         params: Parameters<VideoExtractFramesRequest>,
-    ) -> Result<Json<serde_json::Value>, String> {
+    ) -> Result<Json<McpObject>, String> {
         let req = params.0;
         let input = std::path::Path::new(&req.video_path);
         if !input.exists() || !input.is_file() {
@@ -2777,7 +2812,7 @@ impl OpenMediaServer {
         }
 
         serde_json::to_value(outputs)
-            .map(Json)
+            .map(McpObject).map(Json)
             .map_err(|e| e.to_string())
     }
 
@@ -2788,7 +2823,7 @@ impl OpenMediaServer {
     pub async fn video_trim(
         &self,
         params: Parameters<VideoTrimRequest>,
-    ) -> Result<Json<serde_json::Value>, String> {
+    ) -> Result<Json<McpObject>, String> {
         let req = params.0;
         let input = std::path::Path::new(&req.video_path);
         if !input.exists() || !input.is_file() {
@@ -2842,7 +2877,7 @@ impl OpenMediaServer {
         };
 
         serde_json::to_value(spec)
-            .map(Json)
+            .map(McpObject).map(Json)
             .map_err(|e| e.to_string())
     }
 
@@ -2853,7 +2888,7 @@ impl OpenMediaServer {
     pub async fn improve_score_image(
         &self,
         params: Parameters<ImproveScoreImageRequest>,
-    ) -> Result<Json<serde_json::Value>, String> {
+    ) -> Result<Json<McpObject>, String> {
         let req = params.0;
         let path = std::path::Path::new(&req.image_path);
         
@@ -2881,7 +2916,7 @@ impl OpenMediaServer {
             "needs_refinement": needs_refinement,
         });
 
-        Ok(Json(response))
+        Ok(Json(McpObject(response)))
     }
 
     #[tool(
@@ -2891,7 +2926,7 @@ impl OpenMediaServer {
     pub async fn improve_refine_prompt(
         &self,
         params: Parameters<ImproveRefinePromptRequest>,
-    ) -> Result<Json<serde_json::Value>, String> {
+    ) -> Result<Json<McpObject>, String> {
         let req = params.0;
         let round = req.round.unwrap_or(1);
         
@@ -2916,7 +2951,7 @@ impl OpenMediaServer {
             "changes": refined.changes,
         });
 
-        Ok(Json(response))
+        Ok(Json(McpObject(response)))
     }
 
     #[tool(
@@ -2926,7 +2961,7 @@ impl OpenMediaServer {
     pub async fn improve_auto_refine(
         &self,
         params: Parameters<ImproveAutoRefineRequest>,
-    ) -> Result<Json<serde_json::Value>, String> {
+    ) -> Result<Json<McpObject>, String> {
         let req = params.0;
         let width = req.width.unwrap_or(512);
         let height = req.height.unwrap_or(512);
@@ -3045,7 +3080,7 @@ impl OpenMediaServer {
 
         let best = best_record.ok_or_else(|| "No generation record created".to_string())?;
         serde_json::to_value(best)
-            .map(Json)
+            .map(McpObject).map(Json)
             .map_err(|e| e.to_string())
     }
 
@@ -3056,7 +3091,7 @@ impl OpenMediaServer {
     pub async fn improve_feedback(
         &self,
         params: Parameters<ImproveFeedbackRequest>,
-    ) -> Result<Json<serde_json::Value>, String> {
+    ) -> Result<Json<McpObject>, String> {
         let req = params.0;
         
         let feedback = Feedback {
@@ -3074,7 +3109,7 @@ impl OpenMediaServer {
             "message": "Feedback submitted successfully",
         });
 
-        Ok(Json(response))
+        Ok(Json(McpObject(response)))
     }
 
     #[tool(
@@ -3084,7 +3119,7 @@ impl OpenMediaServer {
     pub async fn improve_quality_report(
         &self,
         params: Parameters<ImproveQualityReportRequest>,
-    ) -> Result<Json<serde_json::Value>, String> {
+    ) -> Result<Json<McpObject>, String> {
         let req = params.0;
         
         let stats = self.history.stats().map_err(|e| e.to_string())?;
@@ -3110,7 +3145,7 @@ impl OpenMediaServer {
             "recent_records": recent,
         });
 
-        Ok(Json(response))
+        Ok(Json(McpObject(response)))
     }
 
     #[tool(
@@ -3120,7 +3155,7 @@ impl OpenMediaServer {
     pub async fn create_svg(
         &self,
         params: Parameters<CreateSvgRequest>,
-    ) -> Result<Json<serde_json::Value>, String> {
+    ) -> Result<Json<McpObject>, String> {
         let req = params.0;
         let start_time = std::time::Instant::now();
         let _ = std::fs::create_dir_all(&self.config.paths.output_dir);
@@ -3157,7 +3192,7 @@ impl OpenMediaServer {
         };
 
         serde_json::to_value(output)
-            .map(Json)
+            .map(McpObject).map(Json)
             .map_err(|e| e.to_string())
     }
 
@@ -3168,7 +3203,7 @@ impl OpenMediaServer {
     pub async fn create_chart(
         &self,
         params: Parameters<CreateChartRequest>,
-    ) -> Result<Json<serde_json::Value>, String> {
+    ) -> Result<Json<McpObject>, String> {
         let req = params.0;
         let start_time = std::time::Instant::now();
         let _ = std::fs::create_dir_all(&self.config.paths.output_dir);
@@ -3215,7 +3250,7 @@ impl OpenMediaServer {
         };
 
         serde_json::to_value(output)
-            .map(Json)
+            .map(McpObject).map(Json)
             .map_err(|e| e.to_string())
     }
 
@@ -3226,7 +3261,7 @@ impl OpenMediaServer {
     pub async fn create_icon(
         &self,
         params: Parameters<CreateIconRequest>,
-    ) -> Result<Json<serde_json::Value>, String> {
+    ) -> Result<Json<McpObject>, String> {
         let req = params.0;
         let start_time = std::time::Instant::now();
         let _ = std::fs::create_dir_all(&self.config.paths.output_dir);
@@ -3267,7 +3302,7 @@ impl OpenMediaServer {
         };
 
         serde_json::to_value(output)
-            .map(Json)
+            .map(McpObject).map(Json)
             .map_err(|e| e.to_string())
     }
 
@@ -3278,7 +3313,7 @@ impl OpenMediaServer {
     pub async fn template_create(
         &self,
         params: Parameters<TemplateCreateRequest>,
-    ) -> Result<Json<serde_json::Value>, String> {
+    ) -> Result<Json<McpObject>, String> {
         let req = params.0;
         let templates_dir = get_templates_dir();
         std::fs::create_dir_all(&templates_dir)
@@ -3305,7 +3340,7 @@ impl OpenMediaServer {
             "path": template_path.to_string_lossy().to_string(),
         });
         
-        Ok(Json(response))
+        Ok(Json(McpObject(response)))
     }
 
     #[tool(
@@ -3315,7 +3350,7 @@ impl OpenMediaServer {
     pub async fn template_read(
         &self,
         params: Parameters<TemplateReadRequest>,
-    ) -> Result<Json<serde_json::Value>, String> {
+    ) -> Result<Json<McpObject>, String> {
         let req = params.0;
         let templates_dir = get_templates_dir();
         
@@ -3327,7 +3362,7 @@ impl OpenMediaServer {
             
             let s = std::fs::read_to_string(&template_path).map_err(|e| e.to_string())?;
             let custom_tmpl: serde_json::Value = serde_json::from_str(&s).map_err(|e| e.to_string())?;
-            Ok(Json(custom_tmpl))
+            Ok(Json(McpObject(custom_tmpl)))
         } else {
             let mut list = Vec::new();
             
@@ -3419,7 +3454,7 @@ impl OpenMediaServer {
                 }
             }
             
-            Ok(Json(serde_json::json!({ "templates": list })))
+            Ok(Json(McpObject(serde_json::json!({ "templates": list }))))
         }
     }
 
@@ -3430,7 +3465,7 @@ impl OpenMediaServer {
     pub async fn template_update(
         &self,
         params: Parameters<TemplateUpdateRequest>,
-    ) -> Result<Json<serde_json::Value>, String> {
+    ) -> Result<Json<McpObject>, String> {
         let req = params.0;
         let templates_dir = get_templates_dir();
         let template_path = templates_dir.join(format!("{}.json", req.name.to_lowercase()));
@@ -3463,7 +3498,7 @@ impl OpenMediaServer {
             "message": format!("Template '{}' updated successfully", req.name),
         });
         
-        Ok(Json(response))
+        Ok(Json(McpObject(response)))
     }
 
     #[tool(
@@ -3473,7 +3508,7 @@ impl OpenMediaServer {
     pub async fn template_delete(
         &self,
         params: Parameters<TemplateDeleteRequest>,
-    ) -> Result<Json<serde_json::Value>, String> {
+    ) -> Result<Json<McpObject>, String> {
         let req = params.0;
         let templates_dir = get_templates_dir();
         let template_path = templates_dir.join(format!("{}.json", req.name.to_lowercase()));
@@ -3490,7 +3525,7 @@ impl OpenMediaServer {
             "message": format!("Template '{}' deleted successfully", req.name),
         });
         
-        Ok(Json(response))
+        Ok(Json(McpObject(response)))
     }
 }
 
@@ -3740,7 +3775,7 @@ mod tests {
         let result = server.video_from_template(params).await;
         assert!(result.is_ok());
         let val = result.unwrap().0;
-        let output: openmedia_core::VideoSpec = serde_json::from_value(val).unwrap();
+        let output: openmedia_core::VideoSpec = serde_json::from_value(val.into()).unwrap();
         assert!(output.path.exists());
 
         let _ = std::fs::remove_dir_all(&output_dir);
@@ -3785,7 +3820,7 @@ mod tests {
         let result = server.diagram_generate_mermaid(params).await;
         assert!(result.is_ok());
         let val = result.unwrap().0;
-        let output: openmedia_core::ImageOutput = serde_json::from_value(val).unwrap();
+        let output: openmedia_core::ImageOutput = serde_json::from_value(val.into()).unwrap();
         let content = std::fs::read_to_string(&output.path).unwrap();
         assert!(content.contains("#aabbcc")); // custom theme override was applied
         let _ = std::fs::remove_file(output.path);
@@ -3824,7 +3859,7 @@ mod tests {
         let result = server.video_from_template(params).await;
         assert!(result.is_ok());
         let val = result.unwrap().0;
-        let output: openmedia_core::VideoSpec = serde_json::from_value(val).unwrap();
+        let output: openmedia_core::VideoSpec = serde_json::from_value(val.into()).unwrap();
         assert!(output.path.exists());
         let _ = std::fs::remove_file(output.path);
     }
@@ -3877,7 +3912,7 @@ mod tests {
         }
         assert!(result.is_ok());
         let val = result.unwrap().0;
-        let output: openmedia_core::VideoSpec = serde_json::from_value(val).unwrap();
+        let output: openmedia_core::VideoSpec = serde_json::from_value(val.into()).unwrap();
         assert!(output.path.exists());
         let _ = std::fs::remove_file(output.path);
         let _ = std::fs::remove_file("assets/test_audio.wav");
@@ -3948,7 +3983,7 @@ mod tests {
         let result = server.rasterize_svg(params).await;
         assert!(result.is_ok());
         let val = result.unwrap().0;
-        let output: openmedia_core::ImageOutput = serde_json::from_value(val).unwrap();
+        let output: openmedia_core::ImageOutput = serde_json::from_value(val.into()).unwrap();
         assert_eq!(output.width, 200);
         assert_eq!(output.height, 200);
         assert!(output.path.exists());
@@ -3985,7 +4020,7 @@ mod tests {
         let result = server.diagram_generate_mermaid(params).await;
         assert!(result.is_ok());
         let val = result.unwrap().0;
-        let output: openmedia_core::ImageOutput = serde_json::from_value(val).unwrap();
+        let output: openmedia_core::ImageOutput = serde_json::from_value(val.into()).unwrap();
         assert_eq!(output.format, "svg");
         assert!(output.path.exists());
         let svg_content = std::fs::read_to_string(&output.path).unwrap();
@@ -4009,7 +4044,7 @@ mod tests {
         let result_png = server.diagram_generate_mermaid(params_png).await;
         assert!(result_png.is_ok());
         let val_png = result_png.unwrap().0;
-        let output_png: openmedia_core::ImageOutput = serde_json::from_value(val_png).unwrap();
+        let output_png: openmedia_core::ImageOutput = serde_json::from_value(val_png.into()).unwrap();
         assert_eq!(output_png.format, "png");
         assert_eq!(output_png.width, 400);
         assert!(output_png.path.exists());
@@ -4040,7 +4075,7 @@ mod tests {
         let result = server.html_to_image(params).await;
         match result {
             Ok(val) => {
-                let output: openmedia_core::ImageOutput = serde_json::from_value(val.0).unwrap();
+                let output: openmedia_core::ImageOutput = serde_json::from_value(val.0.into()).unwrap();
                 assert_eq!(output.width, 800);
                 assert_eq!(output.height, 600);
                 assert!(output.path.exists());
@@ -4085,7 +4120,7 @@ mod tests {
         let result = server.animate_svg(params).await;
         assert!(result.is_ok());
         let val = result.unwrap().0;
-        let output: openmedia_core::AnimatedSvgOutput = serde_json::from_value(val).unwrap();
+        let output: openmedia_core::AnimatedSvgOutput = serde_json::from_value(val.into()).unwrap();
         assert_eq!(output.width, 100);
         assert_eq!(output.height, 100);
         assert_eq!(output.duration, 2.0);
@@ -4130,7 +4165,7 @@ mod tests {
         let result = server.animate_svg(params).await;
         assert!(result.is_ok());
         let val = result.unwrap().0;
-        let output: openmedia_core::AnimatedSvgOutput = serde_json::from_value(val).unwrap();
+        let output: openmedia_core::AnimatedSvgOutput = serde_json::from_value(val.into()).unwrap();
         assert_eq!(output.animation_count, 1);
         assert!(output.path.exists());
         
@@ -4187,7 +4222,7 @@ mod tests {
         let result = server.animate_create_timeline(params).await;
         assert!(result.is_ok());
         let val = result.unwrap().0;
-        let output: openmedia_core::AnimatedSvgOutput = serde_json::from_value(val).unwrap();
+        let output: openmedia_core::AnimatedSvgOutput = serde_json::from_value(val.into()).unwrap();
         assert_eq!(output.duration, 3.5);
         assert_eq!(output.animation_count, 2);
         
@@ -4219,7 +4254,7 @@ mod tests {
         let result = server.animate_morph_paths(params).await;
         assert!(result.is_ok());
         let val = result.unwrap().0;
-        let output: openmedia_core::AnimatedSvgOutput = serde_json::from_value(val).unwrap();
+        let output: openmedia_core::AnimatedSvgOutput = serde_json::from_value(val.into()).unwrap();
         assert_eq!(output.duration, 4.0);
         assert_eq!(output.animation_count, 1);
         
@@ -4250,7 +4285,7 @@ mod tests {
         let result = server.animate_generate_spinner(params).await;
         assert!(result.is_ok());
         let val = result.unwrap().0;
-        let output: openmedia_core::AnimatedSvgOutput = serde_json::from_value(val).unwrap();
+        let output: openmedia_core::AnimatedSvgOutput = serde_json::from_value(val.into()).unwrap();
         assert_eq!(output.width, 80);
         assert_eq!(output.height, 80);
         
@@ -4298,7 +4333,7 @@ mod tests {
         let res_import = server.animate_from_lottie(params_import).await;
         assert!(res_import.is_ok());
         let val_import = res_import.unwrap().0;
-        let out_import: openmedia_core::AnimatedSvgOutput = serde_json::from_value(val_import).unwrap();
+        let out_import: openmedia_core::AnimatedSvgOutput = serde_json::from_value(val_import.into()).unwrap();
         assert_eq!(out_import.width, 120);
         assert_eq!(out_import.height, 120);
 
@@ -4337,7 +4372,7 @@ mod tests {
         let result = server.create_svg(params).await;
         assert!(result.is_ok());
         let val = result.unwrap().0;
-        let output: openmedia_core::ImageOutput = serde_json::from_value(val).unwrap();
+        let output: openmedia_core::ImageOutput = serde_json::from_value(val.into()).unwrap();
         assert_eq!(output.width, 800);
         assert_eq!(output.height, 600);
         assert!(output.path.exists());
@@ -4376,7 +4411,7 @@ mod tests {
         let result = server.create_chart(params).await;
         assert!(result.is_ok());
         let val = result.unwrap().0;
-        let output: openmedia_core::ImageOutput = serde_json::from_value(val).unwrap();
+        let output: openmedia_core::ImageOutput = serde_json::from_value(val.into()).unwrap();
         assert_eq!(output.width, 800);
         assert_eq!(output.height, 600);
         assert!(output.path.exists());
@@ -4409,7 +4444,7 @@ mod tests {
         let result = server.create_icon(params).await;
         assert!(result.is_ok());
         let val = result.unwrap().0;
-        let output: openmedia_core::ImageOutput = serde_json::from_value(val).unwrap();
+        let output: openmedia_core::ImageOutput = serde_json::from_value(val.into()).unwrap();
         assert_eq!(output.width, 32);
         assert_eq!(output.height, 32);
         assert!(output.path.exists());
@@ -4448,7 +4483,7 @@ mod tests {
         let result = server.video_from_template(params).await;
         assert!(result.is_ok());
         let val = result.unwrap().0;
-        let output: openmedia_core::VideoSpec = serde_json::from_value(val).unwrap();
+        let output: openmedia_core::VideoSpec = serde_json::from_value(val.into()).unwrap();
         assert!(output.path.exists());
     }
 
@@ -4575,7 +4610,7 @@ mod tests {
         let video_res = server.video_from_template(video_params).await;
         assert!(video_res.is_ok(), "Failed to generate video from custom template: {:?}", video_res.err());
         let video_val = video_res.unwrap().0;
-        let video_output: openmedia_core::VideoSpec = serde_json::from_value(video_val).unwrap();
+        let video_output: openmedia_core::VideoSpec = serde_json::from_value(video_val.into()).unwrap();
         assert!(video_output.path.exists());
         let _ = std::fs::remove_file(&video_output.path);
 

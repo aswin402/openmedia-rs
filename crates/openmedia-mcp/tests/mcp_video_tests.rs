@@ -55,7 +55,7 @@ async fn test_mcp_video_generation_tools() {
         output_path: None,
     });
     let res = server.video_create(create_params).await.unwrap();
-    let out: openmedia_core::VideoSpec = serde_json::from_value(res.0).unwrap();
+    let out: openmedia_core::VideoSpec = serde_json::from_value(res.0.into()).unwrap();
     assert_eq!(out.width, 320);
     assert_eq!(out.height, 240);
     assert!(out.path.exists());
@@ -69,7 +69,7 @@ async fn test_mcp_video_generation_tools() {
         output_format: Some("png".to_string()),
     });
     let res = server.video_preview(preview_params).await.unwrap();
-    let out_img: openmedia_core::ImageOutput = serde_json::from_value(res.0).unwrap();
+    let out_img: openmedia_core::ImageOutput = serde_json::from_value(res.0.into()).unwrap();
     assert_eq!(out_img.width, 160);
     assert_eq!(out_img.height, 120);
     assert!(out_img.path.exists());
@@ -94,7 +94,7 @@ async fn test_mcp_video_generation_tools() {
         output_path: None,
     });
     let res = server.video_create_slideshow(slideshow_params).await.unwrap();
-    let out: openmedia_core::VideoSpec = serde_json::from_value(res.0).unwrap();
+    let out: openmedia_core::VideoSpec = serde_json::from_value(res.0.into()).unwrap();
     assert_eq!(out.width, 320);
     assert_eq!(out.height, 240);
     assert!(out.path.exists());
@@ -112,7 +112,7 @@ async fn test_mcp_video_generation_tools() {
         output_path: None,
     });
     let res = server.video_from_template(template_params).await.unwrap();
-    let out: openmedia_core::VideoSpec = serde_json::from_value(res.0).unwrap();
+    let out: openmedia_core::VideoSpec = serde_json::from_value(res.0.into()).unwrap();
     assert!(out.path.exists());
 
     // Test 5: video_extract_frames
@@ -137,7 +137,7 @@ async fn test_mcp_video_generation_tools() {
         output_path: Some(trimmed_path.to_str().unwrap().to_string()),
     });
     let res = server.video_trim(trim_params).await.unwrap();
-    let out_trimmed: openmedia_core::VideoSpec = serde_json::from_value(res.0).unwrap();
+    let out_trimmed: openmedia_core::VideoSpec = serde_json::from_value(res.0.into()).unwrap();
     assert!(out_trimmed.path.exists());
 
     // Test 7: video_add_transition and video_add_audio on scene JSON file

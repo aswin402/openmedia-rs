@@ -56,7 +56,7 @@ async fn test_mcp_self_improvement_tools() {
     });
     let res = server.improve_auto_refine(auto_refine_params).await.unwrap();
     let val = res.0;
-    let out: openmedia_improve::GenerationRecord = serde_json::from_value(val).unwrap();
+    let out: openmedia_improve::GenerationRecord = serde_json::from_value(val.into()).unwrap();
     assert_eq!(out.tool_name, "improve_auto_refine");
     assert_eq!(out.width, Some(128));
     assert_eq!(out.height, Some(128));
